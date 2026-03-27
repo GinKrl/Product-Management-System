@@ -1,16 +1,88 @@
-# React + Vite
+# ✅ Product Management System — Sprint 1 Setup Guide
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This documentation provides the complete setup instructions for running the PMS (Product Management System) locally during **Sprint 1**.  
+It covers installation, environment setup, testing, and development workflow.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Getting Started
 
-## React Compiler
+### ✅ 1. Clone the Repository
+```bash
+git clone https://github.com/<your-org>/<your-repo>.git
+cd <your-repo>
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+📦 Install Dependencies
+Install all required packages:
 
-## Expanding the ESLint configuration
+npm install
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+🔑 Environment Variables
+
+Create a .env file in the project root and add the variables below:
+
+VITE_SUPABASE_URL=<your-supabase-url>
+VITE_SUPABASE_ANON_KEY=<your-supabase-anon-key>
+
+▶️ Start the Development Server
+To run the local development server:
+
+npm run dev
+
+This will launch Vite and serve the React app on:
+
+http://localhost:5173
+
+🧪 Testing (Vitest + React Testing Library)
+
+Sprint 1 requires automated tests for the authentication flow.
+
+✅ Run All Tests
+
+npm run test
+
+Vitest is fully configured with:
+
+jsdom environment
+setup file (vitest.setup.js)
+React Testing Library
+Watch mode for auto‑reruns
+
+All test files are inside:
+/src/tests/
+
+📚 Technologies Used in Sprint 1
+
+React + Vite — Frontend framework & dev environment
+TailwindCSS — Styling
+Supabase — Auth & Database
+Vitest — Testing framework
+React Testing Library — Component testing
+ESLint — Code linting
+
+📄 Documentation Files
+Location of Sprint documentation:
+docs/sprint1-log.md
+
+Contains:
+
+Completed Sprint 1 tasks
+Blockers & resolutions
+Notes for Sprint 2 QA tasks
+
+
+✅ Sprint 1 Deliverables Included
+This repository contains the required Sprint 1 outputs for M5: QA / Documentation:
+
+✅ Vitest installation & configuration
+✅ Auth test placeholders (Email, Google OAuth, Login Guard)
+✅ Sprint 1 Log
+✅ Updated README.md setup guide
+
+
+👩‍💻 Developer Notes
+This repo follows the project-wide Git workflow:
+feature/branch → Pull Request → dev → release → main
+
+✅ Never commit directly to main or dev.
+✅ All work must go through a properly named feature/test/docs branch.
