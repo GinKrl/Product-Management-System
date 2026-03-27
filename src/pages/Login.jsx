@@ -1,16 +1,26 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom'; // 1. Added Link import here!
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // TODO: Felix — attach Supabase login here
-    // e.g. await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      alert("Error: " + error.message);
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   return (
@@ -20,11 +30,10 @@ const Login = () => {
         rel="stylesheet"
       />
 
-      {/* Minimal CSS — only for things Tailwind can't do: keyframes, backdrop-filter, custom font, clamp() */}
       <style>{`
         html, body, #root { height: 100%; margin: 0; padding: 0; }
-        .font-dm-sans    { font-family: 'DM Sans', sans-serif; }
-        .font-dm-serif   { font-family: 'DM Serif Display', serif; }
+        .font-dm-sans     { font-family: 'DM Sans', sans-serif; }
+        .font-dm-serif    { font-family: 'DM Serif Display', serif; }
         .left-gradient   { background: linear-gradient(150deg, #7f1d1d 0%, #b91c1c 35%, #e11d48 65%, #f97316 100%); }
         .title-clamp     { font-size: clamp(20px, 2vw, 26px); }
         .heading-clamp   { font-size: clamp(36px, 4vw, 58px); }
@@ -34,7 +43,7 @@ const Login = () => {
         @keyframes drift3 { 0%,100%{transform:translate(0,0) rotate(40deg);} 50%{transform:translate(10px,-18px) rotate(48deg);} }
         @keyframes drift4 { 0%,100%{transform:translate(0,0) rotate(-5deg);} 50%{transform:translate(-8px,-22px) rotate(-12deg);} }
         @keyframes drift5 { 0%,100%{transform:translate(0,0) rotate(65deg);} 50%{transform:translate(6px,-14px) rotate(72deg);} }
-        @keyframes pulse  { 0%,100%{opacity:0.18;transform:scale(1);} 50%{opacity:0.28;transform:scale(1.08);} }
+        @keyframes pulse   { 0%,100%{opacity:0.18;transform:scale(1);} 50%{opacity:0.28;transform:scale(1.08);} }
         @keyframes fadeSlideUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
 
         .anim-drift1 { animation: drift1 5.0s ease-in-out infinite; }
@@ -79,7 +88,6 @@ const Login = () => {
         {/* ── LEFT PANEL (60%) ── */}
         <div className="left-gradient relative flex flex-[3] flex-col justify-end overflow-hidden p-16 min-w-0">
 
-          {/* Glowing orbs */}
           <div className="absolute top-[5%] left-[10%] w-64 h-64 rounded-full anim-pulse"
                style={{ background: 'radial-gradient(circle, rgba(255,80,80,0.30) 0%, transparent 70%)', filter: 'blur(2px)' }} />
           <div className="absolute bottom-[10%] right-[8%] w-48 h-48 rounded-full anim-pulse2"
@@ -87,28 +95,23 @@ const Login = () => {
           <div className="absolute top-[40%] left-[50%] w-36 h-36 rounded-full anim-pulse3"
                style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%)' }} />
 
-          {/* Glass pills */}
           <div className="absolute glass-pill rounded-full anim-drift1"  style={{ width:160, height:46, bottom:'26%', left:'6%' }} />
           <div className="absolute glass-pill rounded-full anim-drift2"  style={{ width:120, height:36, top:'20%',   left:'28%' }} />
           <div className="absolute glass-pill rounded-full anim-drift3"  style={{ width:200, height:52, bottom:'12%', left:'34%' }} />
 
-          {/* Thin streaks */}
           <div className="absolute rounded-full anim-drift4"  style={{ width:100, height:16, top:'15%',   left:'12%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
           <div className="absolute rounded-full anim-drift5"  style={{ width:70,  height:12, top:'35%',   left:'55%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
           <div className="absolute rounded-full anim-drift1b" style={{ width:130, height:14, bottom:'20%', left:'50%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
           <div className="absolute rounded-full anim-drift2b" style={{ width:55,  height:10, top:'60%',   left:'20%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
 
-          {/* Dots */}
           <div className="absolute rounded-full anim-drift3b" style={{ width:14, height:14, top:'28%',   left:'42%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
           <div className="absolute rounded-full anim-drift4b" style={{ width:10, height:10, bottom:'35%', left:'65%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
           <div className="absolute rounded-full anim-drift5b" style={{ width:18, height:18, top:'55%',   left:'72%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
           <div className="absolute rounded-full anim-drift1c" style={{ width:8,  height:8,  top:'12%',   left:'62%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
 
-          {/* Rings */}
           <div className="absolute rounded-full anim-drift2c" style={{ width:70, height:70, top:'10%',    left:'48%', border:'2px solid rgba(255,255,255,0.22)', background:'transparent' }} />
           <div className="absolute rounded-full anim-drift3c" style={{ width:45, height:45, bottom:'40%', left:'72%', border:'2px solid rgba(255,255,255,0.22)', background:'transparent' }} />
 
-          {/* Text */}
           <div className="relative z-10">
             <h1 className="font-dm-serif heading-clamp font-normal text-white leading-tight mb-4 tracking-tight">
               Welcome<br />to the platform
@@ -217,7 +220,6 @@ const Login = () => {
 
           <p className="fade-in-4 mt-5 text-center text-xs text-[#9d95b8]">
             Don't have an account?{' '}
-            {/* 2. Replaced the <a> tag with a <Link> tag pointing to /register */}
             <Link to="/register" className="font-bold text-[#b91c1c] hover:text-[#7f1d1d] hover:underline transition-colors">
               Sign up
             </Link>
