@@ -2,13 +2,12 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 
-// Placeholders for now
+// Placeholders for now (Felix: These will stay public until PR-02)
 const Dashboard = () => <div className="p-8"><h1>🏠 Welcome Dashboard</h1></div>;
-const Inventory = () => <div className="p-8"><h1>📦 Inventory (Db2 Protected)</h1></div>;
-const Reports = () => <div className="p-8"><h1>📊 Reports (Db2 Protected)</h1></div>;
+const Inventory = () => <div className="p-8"><h1>📦 Inventory (Protection coming in PR-02)</h1></div>;
+const Reports = () => <div className="p-8"><h1>📊 Reports (Protection coming in PR-02)</h1></div>;
 
 function App() {
   return (
@@ -18,25 +17,10 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          {/* Main Dashboard */}
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-
-          {/* New Protected Routes for the Db2 Data */}
-          <Route path="/inventory" element={
-            <ProtectedRoute requiredModule="Inventory">
-              <Inventory />
-            </ProtectedRoute>
-          } />
-
-          <Route path="/reports" element={
-            <ProtectedRoute requiredModule="Reports">
-              <Reports />
-            </ProtectedRoute>
-          } />
+          {/* PR-01 Status: Routes are defined but NOT yet protected */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/inventory" element={<Inventory />} />
+          <Route path="/reports" element={<Reports />} />
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
