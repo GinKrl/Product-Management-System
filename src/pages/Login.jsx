@@ -5,308 +5,174 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // TODO: Felix — attach Supabase login here
+    // e.g. await supabase.auth.signInWithPassword({ email, password })
+  };
+
   return (
     <>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display&display=swap"
+        rel="stylesheet"
+      />
+
+      {/* Minimal CSS — only for things Tailwind can't do: keyframes, backdrop-filter, custom font, clamp() */}
       <style>{`
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body, #root { height: 100%; }
+        html, body, #root { height: 100%; margin: 0; padding: 0; }
+        .font-dm-sans    { font-family: 'DM Sans', sans-serif; }
+        .font-dm-serif   { font-family: 'DM Serif Display', serif; }
+        .left-gradient   { background: linear-gradient(150deg, #7f1d1d 0%, #b91c1c 35%, #e11d48 65%, #f97316 100%); }
+        .title-clamp     { font-size: clamp(20px, 2vw, 26px); }
+        .heading-clamp   { font-size: clamp(36px, 4vw, 58px); }
 
-        @keyframes float1 { 0%,100% { transform: translateY(0) rotate(22deg); }  50% { transform: translateY(-22px) rotate(22deg); } }
-        @keyframes float2 { 0%,100% { transform: translateY(0) rotate(-12deg); } 50% { transform: translateY(-28px) rotate(-12deg); } }
-        @keyframes float3 { 0%,100% { transform: translateY(0) rotate(42deg); }  50% { transform: translateY(-16px) rotate(42deg); } }
-        @keyframes float4 { 0%,100% { transform: translateY(0) rotate(6deg); }   50% { transform: translateY(-20px) rotate(6deg); } }
-        @keyframes float5 { 0%,100% { transform: translateY(0) rotate(-30deg); } 50% { transform: translateY(-26px) rotate(-30deg); } }
-        @keyframes fadeSlideUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes drift1 { 0%,100%{transform:translate(0,0) rotate(20deg);} 33%{transform:translate(8px,-20px) rotate(25deg);} 66%{transform:translate(-6px,-10px) rotate(15deg);} }
+        @keyframes drift2 { 0%,100%{transform:translate(0,0) rotate(-15deg);} 33%{transform:translate(-10px,-26px) rotate(-20deg);} 66%{transform:translate(6px,-12px) rotate(-10deg);} }
+        @keyframes drift3 { 0%,100%{transform:translate(0,0) rotate(40deg);} 50%{transform:translate(10px,-18px) rotate(48deg);} }
+        @keyframes drift4 { 0%,100%{transform:translate(0,0) rotate(-5deg);} 50%{transform:translate(-8px,-22px) rotate(-12deg);} }
+        @keyframes drift5 { 0%,100%{transform:translate(0,0) rotate(65deg);} 50%{transform:translate(6px,-14px) rotate(72deg);} }
+        @keyframes pulse  { 0%,100%{opacity:0.18;transform:scale(1);} 50%{opacity:0.28;transform:scale(1.08);} }
+        @keyframes fadeSlideUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
 
-        .login-root {
-          height: 100vh;
-          width: 100vw;
-          display: flex;
-          overflow: hidden;
-          font-family: 'DM Sans', sans-serif;
-          background: #ffffff;
-        }
+        .anim-drift1 { animation: drift1 5.0s ease-in-out infinite; }
+        .anim-drift2 { animation: drift2 6.2s ease-in-out infinite 0.8s; }
+        .anim-drift3 { animation: drift3 4.5s ease-in-out infinite 1.2s; }
+        .anim-drift4 { animation: drift4 4.0s ease-in-out infinite 0.3s; }
+        .anim-drift5 { animation: drift5 5.5s ease-in-out infinite 1.0s; }
+        .anim-drift1b { animation: drift1 6.0s ease-in-out infinite 0.6s; }
+        .anim-drift2b { animation: drift2 4.8s ease-in-out infinite 1.5s; }
+        .anim-drift3b { animation: drift3 5.2s ease-in-out infinite 0.4s; }
+        .anim-drift4b { animation: drift4 4.3s ease-in-out infinite 1.1s; }
+        .anim-drift5b { animation: drift5 6.5s ease-in-out infinite 0.7s; }
+        .anim-drift1c { animation: drift1 3.8s ease-in-out infinite 0.2s; }
+        .anim-drift2c { animation: drift2 7.0s ease-in-out infinite 0.5s; }
+        .anim-drift3c { animation: drift3 5.8s ease-in-out infinite 1.3s; }
+        .anim-pulse   { animation: pulse 6s ease-in-out infinite; }
+        .anim-pulse2  { animation: pulse 8s ease-in-out infinite 2s; }
+        .anim-pulse3  { animation: pulse 7s ease-in-out infinite 1s; }
 
-        /* ── LEFT PANEL — 60% ── */
-        .left-panel {
-          flex: 3;
-          min-width: 0;
-          background: linear-gradient(150deg, #7f1d1d 0%, #b91c1c 35%, #e11d48 65%, #f97316 100%);
-          position: relative;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-end;
-          padding: 64px 60px;
+        .glass-pill {
+          backdrop-filter: blur(6px);
+          background: rgba(255,255,255,0.18);
+          border: 1px solid rgba(255,255,255,0.30);
+          box-shadow: inset 0 1px 1px rgba(255,255,255,0.25), 0 4px 20px rgba(0,0,0,0.10);
         }
-        .pill {
-          position: absolute;
-          border-radius: 999px;
-        }
-        .p1 { width:130px; height:40px; background:rgba(255,150,130,0.55); bottom:24%; left:8%;  animation: float1 4.2s ease-in-out infinite; }
-        .p2 { width: 85px; height:27px; background:rgba(255,100,100,0.50); bottom:40%; left:30%; animation: float2 5.1s ease-in-out infinite 0.4s; }
-        .p3 { width:155px; height:44px; background:rgba(255,120,80,0.45);  bottom:11%; left:38%; animation: float3 3.8s ease-in-out infinite 0.9s; }
-        .p4 { width: 95px; height:30px; background:rgba(255,160,130,0.50); bottom:32%; left:4%;  animation: float4 4.7s ease-in-out infinite 0.7s; }
-        .p5 { width: 68px; height:22px; background:rgba(220,80,80,0.45);   top:26%;  left:46%;   animation: float5 6.2s ease-in-out infinite 0.2s; }
-        .p6 { width:110px; height:34px; background:rgba(255,140,80,0.45);  bottom:19%; left:56%; animation: float1 5.0s ease-in-out infinite 1.1s; }
-        .p7 { width: 75px; height:24px; background:rgba(200,60,60,0.50);   top:17%;  left:14%;   animation: float2 5.6s ease-in-out infinite 0.5s; }
-        .p8 { width: 58px; height:19px; background:rgba(255,130,110,0.45); top:42%;  left:62%;   animation: float3 4.3s ease-in-out infinite 1.3s; }
-        .p9 { width: 90px; height:28px; background:rgba(255,180,100,0.40); top:12%;  left:50%;   animation: float4 3.6s ease-in-out infinite 0.6s; }
+        .fade-in-1 { animation: fadeSlideUp 0.45s ease both 0.05s; }
+        .fade-in-2 { animation: fadeSlideUp 0.45s ease both 0.10s; }
+        .fade-in-3 { animation: fadeSlideUp 0.45s ease both 0.18s; }
+        .fade-in-4 { animation: fadeSlideUp 0.45s ease both 0.35s; }
 
-        .left-text { position: relative; z-index: 2; }
-        .left-text h1 {
-          font-family: 'DM Serif Display', serif;
-          font-size: clamp(36px, 4vw, 58px);
-          font-weight: 400;
-          color: #ffffff;
-          line-height: 1.12;
-          margin-bottom: 18px;
-          letter-spacing: -0.5px;
-        }
-        .left-text p {
-          font-size: 15px;
-          color: rgba(255,255,255,0.75);
-          line-height: 1.75;
-          max-width: 320px;
-        }
-
-        /* ── RIGHT PANEL — 40% ── */
-        .right-panel {
-          flex: 2;
-          max-width: 40vw;
-          min-width: 300px;
-          background: #ffffff;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          padding: 48px 64px;
-          overflow-y: auto;
-          border-left: 1px solid #f0eef8;
-        }
-
-        .form-eyebrow {
-          font-size: 10px;
-          font-weight: 700;
-          letter-spacing: 2.8px;
-          color: #b91c1c;
-          text-transform: uppercase;
-          margin-bottom: 10px;
-          animation: fadeSlideUp 0.45s ease both 0.05s;
-        }
-        .form-title {
-          font-family: 'DM Serif Display', serif;
-          font-size: clamp(23px, 2vw, 26px);
-          font-weight: 400;
-          color: #0f0a1e;
-          line-height: 1.18;
-          margin-bottom: 28px;
-          letter-spacing: -0.5px;
-          animation: fadeSlideUp 0.45s ease both 0.1s;
-        }
-
-        .field { display: flex; flex-direction: column; gap: 7px; }
-        .field label {
-          font-size: 13px;
-          font-weight: 600;
-          color: #2d2640;
-          letter-spacing: 0.1px;
-        }
-        .field-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .forgot-link {
-          font-size: 10px;
-          font-weight: 500;
-          color: #b91c1c;
-          text-decoration: none;
-          transition: color 0.15s;
-        }
-        .forgot-link:hover { color: #7f1d1d; text-decoration: underline; }
-
-        .input-wrap { position: relative; }
-        .input-field {
-          width: 100%;
-          padding: 10px 14px;
-          background: #fafafa;
-          border: 1.5px solid #e2ddf0;
-          border-radius: 10px;
-          font-size: 13px;
-          font-family: 'DM Sans', sans-serif;
-          color: #0f0a1e;
-          outline: none;
-          transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
-          -webkit-appearance: none;
-        }
-        .input-field::placeholder { color: #b8b2cc; }
-        .input-field:focus {
+        .input-focus:focus {
           border-color: #b91c1c;
           background: #ffffff;
-          box-shadow: 0 0 0 4px rgba(185, 28, 28, 0.10);
+          box-shadow: 0 0 0 4px rgba(185,28,28,0.10);
+          outline: none;
         }
-        .pw-toggle {
-          position: absolute;
-          right: 14px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #9d95b8;
-          padding: 4px;
-          display: flex;
-          align-items: center;
-          transition: color 0.15s;
-        }
-        .pw-toggle:hover { color: #b91c1c; }
-
-        .form-fields {
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-          animation: fadeSlideUp 0.45s ease both 0.18s;
-        }
-
-        .field { display: flex; flex-direction: column; gap: 5px; }
-        .field label {
-          font-size: 12px;
-          font-weight: 600;
-          color: #2d2640;
-          letter-spacing: 0.1px;
-        }
-
-        .btn-signin {
-          width: 100%;
-          padding: 11px;
-          background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 60%, #e11d48 100%);
-          color: #ffffff;
-          font-family: 'DM Sans', sans-serif;
-          font-weight: 700;
-          font-size: 13.5px;
-          border: none;
-          border-radius: 10px;
-          cursor: pointer;
-          letter-spacing: 0.2px;
-          transition: transform 0.18s, box-shadow 0.18s;
-          box-shadow: 0 4px 18px rgba(185, 28, 28, 0.30);
-        }
-        .btn-signin:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 28px rgba(185, 28, 28, 0.42);
-        }
-        .btn-signin:active { transform: scale(0.98); }
-
-        .divider {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-        .divider span { flex: 1; height: 1px; background: #e8e3f5; }
-        .divider em {
-          font-style: normal;
-          font-size: 10px;
-          font-weight: 700;
-          color: #c2bcd8;
-          text-transform: uppercase;
-          letter-spacing: 1.8px;
-        }
-
-        .btn-google {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 9px;
-          padding: 10px;
-          background: #ffffff;
-          border: 1.5px solid #e2ddf0;
-          border-radius: 10px;
-          font-family: 'DM Sans', sans-serif;
-          font-weight: 600;
-          font-size: 13px;
-          color: #2d2640;
-          cursor: pointer;
-          transition: background 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-        }
-        .btn-google:hover {
-          background: #faf8ff;
-          border-color: #c4bade;
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        }
-
-        .footer-text {
-          margin-top: 20px;
-          text-align: center;
-          font-size: 12px;
-          color: #9d95b8;
-          animation: fadeSlideUp 0.45s ease both 0.35s;
-        }
-        .footer-text a {
-          color: #b91c1c;
-          font-weight: 700;
-          text-decoration: none;
-          transition: color 0.15s;
-        }
-        .footer-text a:hover { color: #7f1d1d; text-decoration: underline; }
+        .btn-signin-glow:hover { box-shadow: 0 8px 28px rgba(185,28,28,0.42); }
       `}</style>
 
-      <div className="login-root">
+      <div className="flex h-screen w-screen overflow-hidden font-dm-sans">
 
-        {/* ── LEFT ── */}
-        <div className="left-panel">
-          <div className="pill p1" /><div className="pill p2" /><div className="pill p3" />
-          <div className="pill p4" /><div className="pill p5" /><div className="pill p6" />
-          <div className="pill p7" /><div className="pill p8" /><div className="pill p9" />
-          <div className="left-text">
-            <h1>Welcome<br />to the platform</h1>
-            <p>Your workspace, your rules. Sign in to pick up right where you left off.</p>
+        {/* ── LEFT PANEL (60%) ── */}
+        <div className="left-gradient relative flex flex-[3] flex-col justify-end overflow-hidden p-16 min-w-0">
+
+          {/* Glowing orbs */}
+          <div className="absolute top-[5%] left-[10%] w-64 h-64 rounded-full anim-pulse"
+               style={{ background: 'radial-gradient(circle, rgba(255,80,80,0.30) 0%, transparent 70%)', filter: 'blur(2px)' }} />
+          <div className="absolute bottom-[10%] right-[8%] w-48 h-48 rounded-full anim-pulse2"
+               style={{ background: 'radial-gradient(circle, rgba(255,160,60,0.25) 0%, transparent 70%)', filter: 'blur(2px)' }} />
+          <div className="absolute top-[40%] left-[50%] w-36 h-36 rounded-full anim-pulse3"
+               style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%)' }} />
+
+          {/* Glass pills */}
+          <div className="absolute glass-pill rounded-full anim-drift1"  style={{ width:160, height:46, bottom:'26%', left:'6%' }} />
+          <div className="absolute glass-pill rounded-full anim-drift2"  style={{ width:120, height:36, top:'20%',   left:'28%' }} />
+          <div className="absolute glass-pill rounded-full anim-drift3"  style={{ width:200, height:52, bottom:'12%', left:'34%' }} />
+
+          {/* Thin streaks */}
+          <div className="absolute rounded-full anim-drift4"  style={{ width:100, height:16, top:'15%',   left:'12%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
+          <div className="absolute rounded-full anim-drift5"  style={{ width:70,  height:12, top:'35%',   left:'55%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
+          <div className="absolute rounded-full anim-drift1b" style={{ width:130, height:14, bottom:'20%', left:'50%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
+          <div className="absolute rounded-full anim-drift2b" style={{ width:55,  height:10, top:'60%',   left:'20%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
+
+          {/* Dots */}
+          <div className="absolute rounded-full anim-drift3b" style={{ width:14, height:14, top:'28%',   left:'42%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
+          <div className="absolute rounded-full anim-drift4b" style={{ width:10, height:10, bottom:'35%', left:'65%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
+          <div className="absolute rounded-full anim-drift5b" style={{ width:18, height:18, top:'55%',   left:'72%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
+          <div className="absolute rounded-full anim-drift1c" style={{ width:8,  height:8,  top:'12%',   left:'62%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
+
+          {/* Rings */}
+          <div className="absolute rounded-full anim-drift2c" style={{ width:70, height:70, top:'10%',    left:'48%', border:'2px solid rgba(255,255,255,0.22)', background:'transparent' }} />
+          <div className="absolute rounded-full anim-drift3c" style={{ width:45, height:45, bottom:'40%', left:'72%', border:'2px solid rgba(255,255,255,0.22)', background:'transparent' }} />
+
+          {/* Text */}
+          <div className="relative z-10">
+            <h1 className="font-dm-serif heading-clamp font-normal text-white leading-tight mb-4 tracking-tight">
+              Welcome<br />to the platform
+            </h1>
+            <p className="text-sm text-white/75 leading-relaxed max-w-xs">
+              Your workspace, your rules. Sign in to pick up right where you left off.
+            </p>
           </div>
         </div>
 
-        {/* ── RIGHT ── */}
-        <div className="right-panel">
-          <p className="form-eyebrow">User Login</p>
-          <h2 className="form-title">Sign in to<br />your account</h2>
+        {/* ── RIGHT PANEL (40%) ── */}
+        <div className="flex flex-[2] flex-col justify-center overflow-y-auto px-16 py-12 bg-white border-l border-[#f0eef8]"
+             style={{ maxWidth: '40vw', minWidth: 300 }}>
 
-          <div className="form-fields">
+          <p className="fade-in-1 text-[10px] font-bold tracking-[2.8px] text-[#b91c1c] uppercase mb-2.5">
+            User Login
+          </p>
+          <h2 className="fade-in-2 font-dm-serif title-clamp font-normal text-[#0f0a1e] leading-tight mb-7 tracking-tight">
+            Sign in to<br />your account
+          </h2>
+
+          <form onSubmit={handleSubmit} className="fade-in-3 flex flex-col gap-3.5">
 
             {/* Email */}
-            <div className="field">
-              <label htmlFor="email">Email address</label>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="email" className="text-xs font-semibold text-[#2d2640] tracking-tight">
+                Email address
+              </label>
               <input
                 id="email"
-                className="input-field"
                 type="email"
+                required
                 placeholder="you@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
+                className="input-focus w-full px-3.5 py-2.5 bg-[#fafafa] border border-[#e2ddf0] rounded-xl text-sm text-[#0f0a1e] transition-all duration-200 placeholder-[#b8b2cc]"
               />
             </div>
 
             {/* Password */}
-            <div className="field">
-              <div className="field-row">
-                <label htmlFor="password">Password</label>
-                <a href="#" className="forgot-link">Forgot password?</a>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center">
+                <label htmlFor="password" className="text-xs font-semibold text-[#2d2640] tracking-tight">
+                  Password
+                </label>
+                <a href="#" className="text-[10px] font-medium text-[#b91c1c] hover:text-[#7f1d1d] hover:underline transition-colors">
+                  Forgot password?
+                </a>
               </div>
-              <div className="input-wrap">
+              <div className="relative">
                 <input
                   id="password"
-                  className="input-field"
                   type={showPassword ? 'text' : 'password'}
+                  required
                   placeholder="Enter your password"
-                  style={{ paddingRight: 44 }}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
+                  className="input-focus w-full px-3.5 py-2.5 pr-11 bg-[#fafafa] border border-[#e2ddf0] rounded-xl text-sm text-[#0f0a1e] transition-all duration-200 placeholder-[#b8b2cc]"
                 />
-                <button className="pw-toggle" onClick={() => setShowPassword(s => !s)} tabIndex={-1} type="button">
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onClick={() => setShowPassword(s => !s)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#9d95b8] hover:text-[#b91c1c] transition-colors p-1 flex items-center"
+                >
                   {showPassword
                     ? <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                     : <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -316,15 +182,27 @@ const Login = () => {
             </div>
 
             {/* Sign In */}
-            <button className="btn-signin" type="button">Sign In</button>
+            <button
+              type="submit"
+              className="btn-signin-glow w-full py-2.5 rounded-xl text-white font-bold text-sm tracking-tight transition-all duration-200 active:scale-[0.98]"
+              style={{ background: 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 60%, #e11d48 100%)', boxShadow: '0 4px 18px rgba(185,28,28,0.30)' }}
+            >
+              Sign In
+            </button>
 
             {/* Divider */}
-            <div className="divider">
-              <span /><em>or</em><span />
+            <div className="flex items-center gap-3">
+              <span className="flex-1 h-px bg-[#e8e3f5]" />
+              <em className="not-italic text-[10px] font-bold text-[#c2bcd8] uppercase tracking-widest">or</em>
+              <span className="flex-1 h-px bg-[#e8e3f5]" />
             </div>
 
             {/* Google */}
-            <button className="btn-google" type="button">
+            <button
+              type="button"
+              className="w-full flex items-center justify-center gap-2.5 py-2.5 bg-white border border-[#e2ddf0] rounded-xl text-sm font-semibold text-[#2d2640] transition-all duration-200 hover:bg-[#faf8ff] hover:border-[#c4bade] hover:-translate-y-px hover:shadow-md"
+              style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -333,10 +211,14 @@ const Login = () => {
               </svg>
               Continue with Google
             </button>
-          </div>
 
-          <p className="footer-text">
-            Don't have an account? <a href="#">Sign up</a>
+          </form>
+
+          <p className="fade-in-4 mt-5 text-center text-xs text-[#9d95b8]">
+            Don't have an account?{' '}
+            <a href="#" className="font-bold text-[#b91c1c] hover:text-[#7f1d1d] hover:underline transition-colors">
+              Sign up
+            </a>
           </p>
         </div>
 
