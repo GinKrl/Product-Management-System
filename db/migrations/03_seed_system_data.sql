@@ -2,10 +2,12 @@
 INSERT INTO RIGHTS (ID, RIGHT_NAME, DESCRIPTION) 
 VALUES (1, 'FULL_ACCESS', 'Can view, edit, and delete across all modules');
 
--- 2. Seed the Superadmin User 
--- (Note: Ensure the USERS table from PR-01 exists first)
+-- 2. Seed the Superadmin Users
 INSERT INTO USERS (EMAIL, USER_TYPE, RECORD_STATUS) 
-VALUES ('jcesperanza@neu.edu.ph', 'SUPERADMIN', 'active');
+VALUES 
+('jcesperanza@neu.edu.ph', 'SUPERADMIN', 'active'),
+('giankarl.minglana@neu.edu.ph', 'SUPERADMIN', 'active'),
+('jenzomark.abilar@neu.edu.ph', 'SUPERADMIN', 'active');
 
 -- 3. Seed the Dashboard Modules
 INSERT INTO MODULE (MODULE_NAME, DESCRIPTION) VALUES 
@@ -13,8 +15,8 @@ INSERT INTO MODULE (MODULE_NAME, DESCRIPTION) VALUES
 ('User Management', 'Manage system users'),
 ('Reports', 'View price history and analytics');
 
--- 4. Map the Superadmin to all Modules with Full Access
+-- 4. Map ALL Superadmins to ALL Modules (The "Power" Change)
 INSERT INTO USERMODULE_RIGHTS (USER_ID, MODULE_ID, RIGHT_ID)
 SELECT U.ID, M.ID, 1 
 FROM USERS U, MODULE M
-WHERE U.EMAIL = 'jcesperanza@neu.edu.ph';
+WHERE U.USER_TYPE = 'SUPERADMIN'; -- This ensures all 3 of you get access!
