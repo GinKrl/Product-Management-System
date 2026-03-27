@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
+import Register from './pages/Register'; // 1. Imported your new Register page
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Placeholder for Dashboard (Felix will fill this later)
@@ -11,6 +12,8 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        {/* 2. Added the new route right here */}
+        <Route path="/register" element={<Register />} /> 
         <Route 
           path="/dashboard" 
           element={
