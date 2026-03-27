@@ -1,15 +1,22 @@
--- Seed the Superadmin User
-INSERT INTO users (email, user_type, record_status) 
-VALUES ('jcesperanza@neu.edu.ph', 'SUPERADMIN', 'active');
+-- 1. Create the Module table
+CREATE TABLE MODULE (
+    ID INT NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1),
+    MODULE_NAME VARCHAR(50),
+    DESCRIPTION VARCHAR(255),
+    PRIMARY KEY (ID)
+);
 
--- Seed basic Modules (Adjust names based on your project requirements)
-INSERT INTO Module (module_name, description) VALUES 
-('Inventory', 'Manage products and stock'),
-('User Management', 'Manage system users'),
-('Reports', 'View price history and analytics');
+-- 2. Create the Rights table
+CREATE TABLE RIGHTS (
+    ID INT NOT NULL PRIMARY KEY,
+    RIGHT_NAME VARCHAR(50),
+    DESCRIPTION VARCHAR(100)
+);
 
--- Assign all rights to the Superadmin
-INSERT INTO UserModule_Rights (user_id, module_id, right_id)
-SELECT u.id, m.id, 1 
-FROM users u, Module m
-WHERE u.email = 'jcesperanza@neu.edu.ph';
+-- 3. Create the UserModule_Rights junction table
+CREATE TABLE USERMODULE_RIGHTS (
+    USER_ID INT NOT NULL,
+    MODULE_ID INT NOT NULL,
+    RIGHT_ID INT NOT NULL,
+    PRIMARY KEY (USER_ID, MODULE_ID)
+);
