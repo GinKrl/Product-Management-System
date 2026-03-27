@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom'; // 1. Added Link import here!
+import { Link } from 'react-router-dom';
 
-const Login = () => {
+const Register = () => {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -9,8 +10,8 @@ const Login = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // TODO: Felix — attach Supabase login here
-    // e.g. await supabase.auth.signInWithPassword({ email, password })
+    // TODO: Felix — attach Supabase sign-up here
+    // e.g. await supabase.auth.signUp({ email, password, options: { data: { name } } })
   };
 
   return (
@@ -111,26 +112,45 @@ const Login = () => {
           {/* Text */}
           <div className="relative z-10">
             <h1 className="font-dm-serif heading-clamp font-normal text-white leading-tight mb-4 tracking-tight">
-              Welcome<br />to the platform
+              Start your<br />journey
             </h1>
             <p className="text-sm text-white/75 leading-relaxed max-w-xs">
-              Your workspace, your rules. Sign in to pick up right where you left off.
+              Create an account to unlock all features and take full control of your workspace today.
             </p>
           </div>
         </div>
 
         {/* ── RIGHT PANEL (40%) ── */}
-        <div className="flex flex-[2] flex-col justify-center overflow-y-auto px-16 py-12 bg-white border-l border-[#f0eef8]"
+        {/* Adjusted padding from py-12 to py-6 to fit the extra field without scrolling */}
+        <div className="flex flex-[2] flex-col justify-center overflow-y-auto px-16 py-6 bg-white border-l border-[#f0eef8]"
              style={{ maxWidth: '40vw', minWidth: 300 }}>
 
           <p className="fade-in-1 text-[10px] font-bold tracking-[2.8px] text-[#b91c1c] uppercase mb-2.5">
-            User Login
+            Create Account
           </p>
-          <h2 className="fade-in-2 font-dm-serif title-clamp font-normal text-[#0f0a1e] leading-tight mb-7 tracking-tight">
-            Sign in to<br />your account
+          {/* Reduced bottom margin from mb-7 to mb-5 */}
+          <h2 className="fade-in-2 font-dm-serif title-clamp font-normal text-[#0f0a1e] leading-tight mb-5 tracking-tight">
+            Join us<br />today
           </h2>
 
-          <form onSubmit={handleSubmit} className="fade-in-3 flex flex-col gap-3.5">
+          {/* Reduced gap from gap-3.5 to gap-3 */}
+          <form onSubmit={handleSubmit} className="fade-in-3 flex flex-col gap-3">
+
+            {/* Full Name */}
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="name" className="text-xs font-semibold text-[#2d2640] tracking-tight">
+                Full Name
+              </label>
+              <input
+                id="name"
+                type="text"
+                required
+                placeholder="John Doe"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                className="input-focus w-full px-3.5 py-2.5 bg-[#fafafa] border border-[#e2ddf0] rounded-xl text-sm text-[#0f0a1e] transition-all duration-200 placeholder-[#b8b2cc]"
+              />
+            </div>
 
             {/* Email */}
             <div className="flex flex-col gap-1.5">
@@ -150,20 +170,15 @@ const Login = () => {
 
             {/* Password */}
             <div className="flex flex-col gap-1.5">
-              <div className="flex justify-between items-center">
-                <label htmlFor="password" className="text-xs font-semibold text-[#2d2640] tracking-tight">
-                  Password
-                </label>
-                <a href="#" className="text-[10px] font-medium text-[#b91c1c] hover:text-[#7f1d1d] hover:underline transition-colors">
-                  Forgot password?
-                </a>
-              </div>
+              <label htmlFor="password" className="text-xs font-semibold text-[#2d2640] tracking-tight">
+                Create Password
+              </label>
               <div className="relative">
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   required
-                  placeholder="Enter your password"
+                  placeholder="At least 8 characters"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   className="input-focus w-full px-3.5 py-2.5 pr-11 bg-[#fafafa] border border-[#e2ddf0] rounded-xl text-sm text-[#0f0a1e] transition-all duration-200 placeholder-[#b8b2cc]"
@@ -182,17 +197,17 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Sign In */}
+            {/* Sign Up Button */}
             <button
               type="submit"
-              className="btn-signin-glow w-full py-2.5 rounded-xl text-white font-bold text-sm tracking-tight transition-all duration-200 active:scale-[0.98]"
+              className="btn-signin-glow w-full mt-1 py-2.5 rounded-xl text-white font-bold text-sm tracking-tight transition-all duration-200 active:scale-[0.98]"
               style={{ background: 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 60%, #e11d48 100%)', boxShadow: '0 4px 18px rgba(185,28,28,0.30)' }}
             >
-              Sign In
+              Create Account
             </button>
 
             {/* Divider */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mt-1">
               <span className="flex-1 h-px bg-[#e8e3f5]" />
               <em className="not-italic text-[10px] font-bold text-[#c2bcd8] uppercase tracking-widest">or</em>
               <span className="flex-1 h-px bg-[#e8e3f5]" />
@@ -215,11 +230,11 @@ const Login = () => {
 
           </form>
 
-          <p className="fade-in-4 mt-5 text-center text-xs text-[#9d95b8]">
-            Don't have an account?{' '}
-            {/* 2. Replaced the <a> tag with a <Link> tag pointing to /register */}
-            <Link to="/register" className="font-bold text-[#b91c1c] hover:text-[#7f1d1d] hover:underline transition-colors">
-              Sign up
+          {/* Reduced margin from mt-5 to mt-4 */}
+          <p className="fade-in-4 mt-4 text-center text-xs text-[#9d95b8]">
+            Already have an account?{' '}
+            <Link to="/login" className="font-bold text-[#b91c1c] hover:text-[#7f1d1d] hover:underline transition-colors">
+              Sign in
             </Link>
           </p>
         </div>
@@ -229,4 +244,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;
