@@ -7,11 +7,26 @@ const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // ✅ ADDED STATES
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
+    setLoading(true);
+    setErrorMsg('');
+
+    // ✅ OPTIONAL VALIDATION
+    if (password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
+
     // PR-02 Logic: Email/Password Sign Up
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -22,11 +37,14 @@ const Register = () => {
     });
 
     if (error) {
+      setErrorMsg(error.message);
       alert("Error: " + error.message);
     } else {
-      alert("Registration successful!");
+      alert("Registration successful! Check your email if confirmation is required.");
       navigate('/login');
     }
+
+    setLoading(false);
   };
 
   return (
@@ -56,11 +74,13 @@ const Register = () => {
               <input type="text" required value={name} onChange={e => setName(e.target.value)}
                 className="input-focus w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm" />
             </div>
+
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-gray-700">Email address</label>
               <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
                 className="input-focus w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm" />
             </div>
+
             <div className="flex flex-col gap-1">
               <label className="text-xs font-semibold text-gray-700">Password</label>
               <div className="relative">
@@ -80,10 +100,24 @@ const Register = () => {
                 </button>
               </div>
             </div>
-            <button type="submit" className="w-full py-3 mt-2 bg-red-700 text-white font-bold rounded-xl hover:bg-red-800 transition-all">
-              Create Account
+
+            {/* ✅ UPDATED BUTTON */}
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full py-3 mt-2 bg-red-700 text-white font-bold rounded-xl hover:bg-red-800 transition-all disabled:opacity-50"
+            >
+              {loading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
+
+          {/* ✅ ERROR MESSAGE UI */}
+          {errorMsg && (
+            <p className="text-red-600 text-xs mt-2 text-center">
+              {errorMsg}
+            </p>
+          )}
+
           <p className="mt-4 text-center text-xs text-gray-500">
             Already have an account? <Link to="/login" className="font-bold text-red-700 hover:underline">Sign in</Link>
           </p>

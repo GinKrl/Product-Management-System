@@ -7,19 +7,39 @@ const ProtectedRoute = ({ children }) => {
   const [session, setSession] = useState(null);
 
   useEffect(() => {
-    // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    const initAuth = async () => {
+      try {
+        const { data: { session: curSession } } = await supabase.auth.getSession();
+        
+        if (!curSession) {
+          setSession(null);
+        } else {
+          // I-check lang kung INACTIVE sa DB
+          const { data } = await supabase
+            .from('user')
+            .select('record_status')
+            .eq('userId', curSession.user.id)
+            .single();
+
+          if (data?.record_status === 'INACTIVE') {
+            await supabase.auth.signOut();
+            setSession(null);
+          } else {
+            setSession(curSession);
+          }
+        }
+      } catch (e) {
+        setSession(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
   }, []);
 
-  if (loading) return <div>Loading security...</div>;
-
-  if (!session) {
-    // Not logged in? Kick them back to login
-    return <Navigate to="/login" replace />;
-  }
+  if (loading) return <div className="p-10">Checking security...</div>;
+  if (!session) return <Navigate to="/login" replace />;
 
   return children;
 };
