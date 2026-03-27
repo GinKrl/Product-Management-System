@@ -1,29 +1,30 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
-import Register from './pages/Register'; // 1. Imported your new Register page
-import ProtectedRoute from './components/ProtectedRoute';
+import Register from './pages/Register';
+import { AuthProvider } from './contexts/AuthContext';
 
-// Placeholder for Dashboard (Felix will fill this later)
-const Dashboard = () => <div className="p-8"><h1>Welcome to the Dashboard</h1></div>;
+// Placeholders for now (Felix: These will stay public until PR-02)
+const Dashboard = () => <div className="p-8"><h1>🏠 Welcome Dashboard</h1></div>;
+const Inventory = () => <div className="p-8"><h1>📦 Inventory (Protection coming in PR-02)</h1></div>;
+const Reports = () => <div className="p-8"><h1>📊 Reports (Protection coming in PR-02)</h1></div>;
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        {/* 2. Added the new route right here */}
-        <Route path="/register" element={<Register />} /> 
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } 
-        />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* PR-01 Status: Routes are defined but NOT yet protected */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/inventory" element={<Inventory />} />
+          <Route path="/reports" element={<Reports />} />
+
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
