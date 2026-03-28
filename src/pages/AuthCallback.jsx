@@ -2,31 +2,30 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 
-export default function AuthCallbackPage() {
+const AuthCallback = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        const { data: userData } = await supabase
-          .from('user')
-          .select('record_status')
-          .eq('auth_id', session.user.id)
-          .single()
+    const handleCallback = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession()
 
-        if (!userData || userData.record_status === 'INACTIVE') {
-          await supabase.auth.signOut()
-          navigate('/login?error=inactive')
-        } else {
-          navigate('/products')
-        }
+      if (error || !session) {
+        console.error('Auth callback error:', error?.message)
+        navigate('/login')
+        return
       }
-    })
-  }, [])
+
+      navigate('/dashboard')
+    }
+
+    handleCallback()
+  }, [navigate])
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-gray-500 text-lg">Redirecting, please wait...</p>
+    <div className="flex items-center justify-center min-h-screen">
+      <p className="text-gray-500 text-sm">Logging you in...</p>
     </div>
   )
 }
+
+export default AuthCallback
