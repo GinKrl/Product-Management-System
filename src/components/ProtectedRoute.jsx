@@ -1,34 +1,26 @@
 import { Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../contexts/AuthContext';
 
 const ProtectedRoute = ({ children }) => {
-  const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState(null);
+  const { session, loading } = useAuth();
 
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const { data: { session: curSession } } = await supabase.auth.getSession();
-        
-        if (curSession) {
-          setSession(curSession);
-        } else {
-          setSession(null);
-        }
-      } catch (e) {
-        setSession(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Show a clean loading state while checking the Supabase session
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-white font-dm-sans">
+        <div className="text-[#b91c1c] font-semibold animate-pulse">
+          Checking security...
+        </div>
+      </div>
+    );
+  }
 
-    initAuth();
-  }, []);
+  // If no user is found, redirect to login
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
 
-  if (loading) return <div className="p-10">Checking security...</div>;
-  if (!session) return <Navigate to="/login" replace />;
-
+  // If authenticated, allow access to the Dashboard
   return children;
 };
 
