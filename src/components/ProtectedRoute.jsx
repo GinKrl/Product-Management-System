@@ -11,22 +11,10 @@ const ProtectedRoute = ({ children }) => {
       try {
         const { data: { session: curSession } } = await supabase.auth.getSession();
         
-        if (!curSession) {
-          setSession(null);
+        if (curSession) {
+          setSession(curSession);
         } else {
-          // I-check lang kung INACTIVE sa DB
-          const { data } = await supabase
-            .from('user')
-            .select('record_status')
-            .eq('userId', curSession.user.id)
-            .single();
-
-          if (data?.record_status === 'INACTIVE') {
-            await supabase.auth.signOut();
-            setSession(null);
-          } else {
-            setSession(curSession);
-          }
+          setSession(null);
         }
       } catch (e) {
         setSession(null);

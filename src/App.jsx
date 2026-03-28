@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import AuthCallback from './pages/AuthCallback'; // ← IDAGDAG
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -21,9 +20,6 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* ← ROUTE PARA SA GOOGLE AUTH CALLBACK */}
-          <Route path="/auth/callback" element={<AuthCallback />} />
-
           <Route 
             path="/dashboard" 
             element={
@@ -32,6 +28,7 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>
