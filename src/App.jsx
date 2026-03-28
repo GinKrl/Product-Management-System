@@ -2,12 +2,16 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import AuthCallback from './pages/AuthCallback'; // 1. IMPORT NA KAILANGAN
+import AuthCallback from './pages/AuthCallback'; // ← IDAGDAG
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 
 // Placeholder for Dashboard (Felix will fill this later)
-const Dashboard = () => <div className="p-8"><h1>Welcome to the Dashboard</h1></div>;
+const Dashboard = () => (
+  <div className="p-8">
+    <h1>Welcome to the Dashboard</h1>
+  </div>
+);
 
 function App() {
   return (
@@ -16,8 +20,8 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
-          {/* 2. ROUTE PARA SA GOOGLE AUTH CALLBACK */}
+
+          {/* ← ROUTE PARA SA GOOGLE AUTH CALLBACK */}
           <Route path="/auth/callback" element={<AuthCallback />} />
 
           <Route 
