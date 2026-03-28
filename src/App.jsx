@@ -5,10 +5,11 @@ import Register from './pages/Register';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 
-// Placeholder for Dashboard (Felix will fill this later)
+// Placeholder for Dashboard
 const Dashboard = () => (
-  <div className="p-8">
-    <h1>Welcome to the Dashboard</h1>
+  <div className="flex flex-col items-center justify-center h-screen font-dm-sans bg-gray-50">
+    <h1 className="text-3xl font-dm-serif text-[#0f0a1e] mb-4">Welcome to the Dashboard</h1>
+    <p className="text-gray-500">Your authentication is working perfectly.</p>
   </div>
 );
 
@@ -19,7 +20,6 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
           <Route 
             path="/dashboard" 
             element={
@@ -28,7 +28,6 @@ function App() {
               </ProtectedRoute>
             } 
           />
-          
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>
