@@ -1,17 +1,38 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // TODO: Felix — attach Supabase sign-up here
-    // e.g. await supabase.auth.signUp({ email, password, options: { data: { name } } })
+    setLoading(true);
+    setErrorMsg('');
+
+    // Logic: Connect to Supabase
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name },
+      },
+    });
+
+    if (error) {
+      setErrorMsg(error.message);
+      setLoading(false);
+    } else {
+      alert("Registration successful! Check your email for a confirmation link.");
+      setLoading(false);
+      navigate('/login');
+    }
   };
 
   return (
@@ -21,7 +42,6 @@ const Register = () => {
         rel="stylesheet"
       />
 
-      {/* Minimal CSS — only for things Tailwind can't do: keyframes, backdrop-filter, custom font, clamp() */}
       <style>{`
         html, body, #root { height: 100%; margin: 0; padding: 0; }
         .font-dm-sans    { font-family: 'DM Sans', sans-serif; }
@@ -77,10 +97,8 @@ const Register = () => {
 
       <div className="flex h-screen w-screen overflow-hidden font-dm-sans">
 
-        {/* ── LEFT PANEL (60%) ── */}
+        {/* ── LEFT PANEL ── */}
         <div className="left-gradient relative flex flex-[3] flex-col justify-end overflow-hidden p-16 min-w-0">
-
-          {/* Glowing orbs */}
           <div className="absolute top-[5%] left-[10%] w-64 h-64 rounded-full anim-pulse"
                style={{ background: 'radial-gradient(circle, rgba(255,80,80,0.30) 0%, transparent 70%)', filter: 'blur(2px)' }} />
           <div className="absolute bottom-[10%] right-[8%] w-48 h-48 rounded-full anim-pulse2"
@@ -88,28 +106,15 @@ const Register = () => {
           <div className="absolute top-[40%] left-[50%] w-36 h-36 rounded-full anim-pulse3"
                style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%)' }} />
 
-          {/* Glass pills */}
           <div className="absolute glass-pill rounded-full anim-drift1"  style={{ width:160, height:46, bottom:'26%', left:'6%' }} />
           <div className="absolute glass-pill rounded-full anim-drift2"  style={{ width:120, height:36, top:'20%',   left:'28%' }} />
           <div className="absolute glass-pill rounded-full anim-drift3"  style={{ width:200, height:52, bottom:'12%', left:'34%' }} />
 
-          {/* Thin streaks */}
           <div className="absolute rounded-full anim-drift4"  style={{ width:100, height:16, top:'15%',   left:'12%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
           <div className="absolute rounded-full anim-drift5"  style={{ width:70,  height:12, top:'35%',   left:'55%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
           <div className="absolute rounded-full anim-drift1b" style={{ width:130, height:14, bottom:'20%', left:'50%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
           <div className="absolute rounded-full anim-drift2b" style={{ width:55,  height:10, top:'60%',   left:'20%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
 
-          {/* Dots */}
-          <div className="absolute rounded-full anim-drift3b" style={{ width:14, height:14, top:'28%',   left:'42%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
-          <div className="absolute rounded-full anim-drift4b" style={{ width:10, height:10, bottom:'35%', left:'65%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
-          <div className="absolute rounded-full anim-drift5b" style={{ width:18, height:18, top:'55%',   left:'72%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
-          <div className="absolute rounded-full anim-drift1c" style={{ width:8,  height:8,  top:'12%',   left:'62%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
-
-          {/* Rings */}
-          <div className="absolute rounded-full anim-drift2c" style={{ width:70, height:70, top:'10%',    left:'48%', border:'2px solid rgba(255,255,255,0.22)', background:'transparent' }} />
-          <div className="absolute rounded-full anim-drift3c" style={{ width:45, height:45, bottom:'40%', left:'72%', border:'2px solid rgba(255,255,255,0.22)', background:'transparent' }} />
-
-          {/* Text */}
           <div className="relative z-10">
             <h1 className="font-dm-serif heading-clamp font-normal text-white leading-tight mb-4 tracking-tight">
               Start your<br />journey
@@ -120,20 +125,24 @@ const Register = () => {
           </div>
         </div>
 
-        {/* ── RIGHT PANEL (40%) ── */}
-        {/* Adjusted padding from py-12 to py-6 to fit the extra field without scrolling */}
+        {/* ── RIGHT PANEL ── */}
         <div className="flex flex-[2] flex-col justify-center overflow-y-auto px-16 py-6 bg-white border-l border-[#f0eef8]"
              style={{ maxWidth: '40vw', minWidth: 300 }}>
 
           <p className="fade-in-1 text-[10px] font-bold tracking-[2.8px] text-[#b91c1c] uppercase mb-2.5">
             Create Account
           </p>
-          {/* Reduced bottom margin from mb-7 to mb-5 */}
           <h2 className="fade-in-2 font-dm-serif title-clamp font-normal text-[#0f0a1e] leading-tight mb-5 tracking-tight">
             Join us<br />today
           </h2>
 
-          {/* Reduced gap from gap-3.5 to gap-3 */}
+          {/* Logic: Show error if sign-up fails */}
+          {errorMsg && (
+            <div className="fade-in-1 mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-xs rounded-lg font-medium">
+              {errorMsg}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="fade-in-3 flex flex-col gap-3">
 
             {/* Full Name */}
@@ -178,7 +187,7 @@ const Register = () => {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   required
-                  placeholder="At least 8 characters"
+                  placeholder="At least 6 characters"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   className="input-focus w-full px-3.5 py-2.5 pr-11 bg-[#fafafa] border border-[#e2ddf0] rounded-xl text-sm text-[#0f0a1e] transition-all duration-200 placeholder-[#b8b2cc]"
@@ -197,23 +206,22 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Sign Up Button */}
+            {/* Sign Up Button with Loading State */}
             <button
               type="submit"
-              className="btn-signin-glow w-full mt-1 py-2.5 rounded-xl text-white font-bold text-sm tracking-tight transition-all duration-200 active:scale-[0.98]"
+              disabled={loading}
+              className="btn-signin-glow w-full mt-1 py-2.5 rounded-xl text-white font-bold text-sm tracking-tight transition-all duration-200 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 60%, #e11d48 100%)', boxShadow: '0 4px 18px rgba(185,28,28,0.30)' }}
             >
-              Create Account
+              {loading ? 'Creating Account...' : 'Create Account'}
             </button>
 
-            {/* Divider */}
             <div className="flex items-center gap-3 mt-1">
               <span className="flex-1 h-px bg-[#e8e3f5]" />
               <em className="not-italic text-[10px] font-bold text-[#c2bcd8] uppercase tracking-widest">or</em>
               <span className="flex-1 h-px bg-[#e8e3f5]" />
             </div>
 
-            {/* Google */}
             <button
               type="button"
               className="w-full flex items-center justify-center gap-2.5 py-2.5 bg-white border border-[#e2ddf0] rounded-xl text-sm font-semibold text-[#2d2640] transition-all duration-200 hover:bg-[#faf8ff] hover:border-[#c4bade] hover:-translate-y-px hover:shadow-md"
@@ -230,7 +238,6 @@ const Register = () => {
 
           </form>
 
-          {/* Reduced margin from mt-5 to mt-4 */}
           <p className="fade-in-4 mt-4 text-center text-xs text-[#9d95b8]">
             Already have an account?{' '}
             <Link to="/login" className="font-bold text-[#b91c1c] hover:text-[#7f1d1d] hover:underline transition-colors">
@@ -238,7 +245,6 @@ const Register = () => {
             </Link>
           </p>
         </div>
-
       </div>
     </>
   );

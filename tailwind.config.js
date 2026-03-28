@@ -2,7 +2,7 @@
 export default {
   content: [
     "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    "./src/**/*.{js,ts,jsx,tsx}", // This ensures Tailwind looks inside subfolders like /pages
   ],
   theme: {
     extend: {},
