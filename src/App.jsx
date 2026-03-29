@@ -29,6 +29,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        
 
         {/* Add more protected pages here:
         <Route
