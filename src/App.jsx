@@ -42,10 +42,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        */}
-
-
-        {/* ── Global redirect ── */}
+        {/* CHANGE THIS LINE: Redirect "/" to "/login" instead of "/dashboard" */}
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
