@@ -24,7 +24,7 @@ const Login = () => {
       setErrorMsg(error.message);
       setLoading(false);
     } else {
-      navigate('/products');
+      navigate('/dashboard');
     }
   };
 
