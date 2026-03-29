@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { productService } from '../services/productService.js';
+
 
 
 // ─────────────────────────────────────────────────────────────

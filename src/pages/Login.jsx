@@ -3,167 +3,337 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email,        setEmail]        = useState('');
+  const [password,     setPassword]     = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [loading,      setLoading]      = useState(false);
+  const [errorMsg,     setErrorMsg]     = useState('');
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg('');
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) { setErrorMsg(error.message); setLoading(false); }
+    else navigate('/dashboard');
+  };
 
-    // Logic: Felix's Supabase Auth Connection
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+  const handleGoogleLogin = async () => {
+    setErrorMsg('');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
-
-    if (error) {
-      setErrorMsg(error.message);
-      setLoading(false);
-    } else {
-      // Success! Move to the products page or dashboard
-      navigate('/products');
-    }
+    if (error) setErrorMsg(error.message);
   };
 
   return (
     <>
-      <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap"
-        rel="stylesheet"
-      />
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
 
       <style>{`
-        html, body, #root { height: 100%; margin: 0; padding: 0; }
-        .font-dm-sans    { font-family: 'DM Sans', sans-serif; }
-        .font-dm-serif   { font-family: 'DM Serif Display', serif; }
-        .left-gradient   { background: linear-gradient(150deg, #7f1d1d 0%, #b91c1c 35%, #e11d48 65%, #f97316 100%); }
-        .title-clamp     { font-size: clamp(20px, 2vw, 26px); }
-        .heading-clamp   { font-size: clamp(36px, 4vw, 58px); }
-        
-        @keyframes fadeSlideUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
-        .fade-in-1 { animation: fadeSlideUp 0.45s ease both 0.05s; }
-        .fade-in-2 { animation: fadeSlideUp 0.45s ease both 0.10s; }
-        .fade-in-3 { animation: fadeSlideUp 0.45s ease both 0.18s; }
-        
-        .input-focus:focus {
-          border-color: #b91c1c;
-          background: #ffffff;
-          box-shadow: 0 0 0 4px rgba(185,28,28,0.10);
-          outline: none;
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body, #root { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+
+        @keyframes drift1 { 0%,100%{transform:translate(0,0) rotate(18deg);}  40%{transform:translate(10px,-22px) rotate(24deg);}  70%{transform:translate(-6px,-12px) rotate(14deg);} }
+        @keyframes drift2 { 0%,100%{transform:translate(0,0) rotate(-14deg);} 40%{transform:translate(-12px,-28px) rotate(-20deg);} 70%{transform:translate(7px,-10px) rotate(-9deg);} }
+        @keyframes drift3 { 0%,100%{transform:translate(0,0) rotate(38deg);}  50%{transform:translate(10px,-20px) rotate(46deg);} }
+        @keyframes drift4 { 0%,100%{transform:translate(0,0) rotate(-6deg);}  50%{transform:translate(-9px,-24px) rotate(-13deg);} }
+        @keyframes drift5 { 0%,100%{transform:translate(0,0) rotate(62deg);}  50%{transform:translate(7px,-16px) rotate(70deg);} }
+        @keyframes orb    { 0%,100%{opacity:.20;transform:scale(1);}           50%{opacity:.34;transform:scale(1.10);} }
+        @keyframes spin   { to{transform:rotate(360deg);} }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
+        @keyframes shimmer{ 0%{background-position:-600px 0;} 100%{background-position:600px 0;} }
+        @keyframes glow   { 0%,100%{opacity:.5;} 50%{opacity:1;} }
+
+        .glass-pill {
+          position: absolute;
+          border-radius: 999px;
+          backdrop-filter: blur(8px);
+          background: rgba(255,255,255,0.16);
+          border: 1px solid rgba(255,255,255,0.28);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 6px 24px rgba(0,0,0,0.08);
         }
+        .streak {
+          position: absolute;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.20);
+          border: 1px solid rgba(255,255,255,0.16);
+        }
+        /* dots only — rings removed entirely to avoid dark-mode border issue */
+        .dot-shape {
+          position: absolute;
+          border-radius: 50%;
+          background: rgba(255,255,255,0.38);
+          box-shadow: 0 0 14px rgba(255,255,255,0.22);
+        }
+
+        .inp {
+          width: 100%;
+          padding: 11px 15px;
+          background: #f9f9fb;
+          border: 1.5px solid #ebe8f5;
+          border-radius: 12px;
+          font-size: 13.5px;
+          font-family: 'DM Sans', sans-serif;
+          color: #0f0a1e;
+          outline: none;
+          transition: border-color .18s, box-shadow .18s, background .18s;
+        }
+        .inp::placeholder { color: #c4bed8; }
+        .inp:focus {
+          border-color: #b91c1c;
+          background: #fff;
+          box-shadow: 0 0 0 3px rgba(185,28,28,0.10);
+        }
+
+        .btn-primary {
+          width: 100%;
+          padding: 12px;
+          background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 55%, #e11d48 100%);
+          color: #fff;
+          font-family: 'DM Sans', sans-serif;
+          font-weight: 700;
+          font-size: 14px;
+          border: none;
+          border-radius: 12px;
+          cursor: pointer;
+          box-shadow: 0 5px 18px rgba(185,28,28,0.34);
+          transition: transform .18s, box-shadow .18s;
+          position: relative;
+          overflow: hidden;
+        }
+        .btn-primary::after {
+          content: '';
+          position: absolute; inset: 0;
+          background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%);
+          background-size: 600px 100%;
+          animation: shimmer 2.4s linear infinite;
+        }
+        .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 26px rgba(185,28,28,0.42); }
+        .btn-primary:active  { transform: scale(.98); }
+        .btn-primary:disabled { opacity: .7; cursor: not-allowed; }
+
+        .btn-google {
+          width: 100%;
+          display: flex; align-items: center; justify-content: center; gap: 10px;
+          padding: 11px 16px;
+          background: #fff;
+          border: 1.5px solid #e4e0f0;
+          border-radius: 12px;
+          font-family: 'DM Sans', sans-serif;
+          font-weight: 600; font-size: 13.5px; color: #2d2640;
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          transition: all .18s;
+        }
+        .btn-google:hover { background: #faf8ff; border-color: #c8c0e0; transform: translateY(-1px); box-shadow: 0 5px 16px rgba(0,0,0,0.08); }
+        .btn-google:active { transform: scale(.98); }
+
+        .f1 { animation: fadeUp .4s ease both .04s; }
+        .f2 { animation: fadeUp .4s ease both .09s; }
+        .f3 { animation: fadeUp .4s ease both .14s; }
+        .f4 { animation: fadeUp .4s ease both .19s; }
+        .f5 { animation: fadeUp .4s ease both .24s; }
+        .f6 { animation: fadeUp .4s ease both .29s; }
+        .f7 { animation: fadeUp .4s ease both .34s; }
       `}</style>
 
-      <div className="flex h-screen w-screen overflow-hidden font-dm-sans">
-        
-        {/* ── LEFT PANEL ── */}
-        <div className="left-gradient relative flex flex-[3] flex-col justify-end p-16 min-w-0">
-          <div className="relative z-10">
-            <h1 className="font-dm-serif heading-clamp font-normal text-white leading-tight mb-4 tracking-tight">
-              Welcome<br />Back
+      <div style={{ display:'flex', height:'100vh', width:'100vw', overflow:'hidden', fontFamily:"'DM Sans',sans-serif" }}>
+
+        {/* ════════ LEFT PANEL ════════ */}
+        <div style={{
+          flex: '3 1 0',
+          position: 'relative',
+          overflow: 'hidden',
+          background: 'linear-gradient(150deg, #7f1d1d 0%, #b91c1c 32%, #e11d48 62%, #f97316 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+          padding: '60px 60px',
+          minWidth: 0,
+        }}>
+
+          {/* Orbs */}
+          {[
+            { w:320,h:320, s:{top:'-5%',left:'-3%'},   bg:'rgba(255,80,80,0.26)',   d:'6s',   dl:'0s'  },
+            { w:240,h:240, s:{bottom:'3%',right:'-2%'}, bg:'rgba(255,150,50,0.20)',  d:'8.5s', dl:'2s'  },
+            { w:180,h:180, s:{top:'36%',right:'13%'},   bg:'rgba(255,255,255,0.09)', d:'7s',   dl:'1s'  },
+            { w:150,h:150, s:{top:'10%',left:'40%'},    bg:'rgba(255,100,60,0.14)',  d:'9s',   dl:'3s'  },
+          ].map((o,i) => (
+            <div key={i} style={{ position:'absolute', borderRadius:'50%', filter:'blur(3px)', width:o.w, height:o.h, background:`radial-gradient(circle,${o.bg} 0%,transparent 70%)`, animation:`orb ${o.d} ease-in-out infinite ${o.dl}`, ...o.s }} />
+          ))}
+
+          {/* Glass pills */}
+          <div className="glass-pill" style={{ width:160, height:46, bottom:'26%', left:'5%',   animation:'drift1 5.2s ease-in-out infinite' }} />
+          <div className="glass-pill" style={{ width:125, height:36, top:'19%',   left:'25%',  animation:'drift2 6.5s ease-in-out infinite 0.7s' }} />
+          <div className="glass-pill" style={{ width:200, height:52, bottom:'11%',left:'31%',  animation:'drift3 4.6s ease-in-out infinite 1.1s' }} />
+          <div className="glass-pill" style={{ width:88,  height:27, top:'43%',   right:'8%',  animation:'drift4 5.8s ease-in-out infinite 0.4s' }} />
+          <div className="glass-pill" style={{ width:115, height:33, top:'10%',   right:'17%', animation:'drift5 7.0s ease-in-out infinite 1.5s' }} />
+
+          {/* Streaks */}
+          <div className="streak" style={{ width:105, height:13, top:'14%',    left:'9%',   animation:'drift4 4.2s ease-in-out infinite 0.3s' }} />
+          <div className="streak" style={{ width:72,  height:11, top:'33%',    left:'53%',  animation:'drift5 5.6s ease-in-out infinite 1.0s' }} />
+          <div className="streak" style={{ width:135, height:14, bottom:'18%', left:'47%',  animation:'drift1 6.1s ease-in-out infinite 0.6s' }} />
+          <div className="streak" style={{ width:58,  height:10, top:'57%',    left:'17%',  animation:'drift2 4.9s ease-in-out infinite 1.4s' }} />
+          <div className="streak" style={{ width:82,  height:12, bottom:'37%', right:'21%', animation:'drift3 5.3s ease-in-out infinite 0.9s' }} />
+
+          {/* Dots only — no rings */}
+          <div className="dot-shape" style={{ width:15,height:15, top:'27%',    left:'40%',  animation:'drift3 5.4s ease-in-out infinite 0.4s' }} />
+          <div className="dot-shape" style={{ width:10,height:10, bottom:'33%', left:'63%',  animation:'drift4 4.4s ease-in-out infinite 1.1s' }} />
+          <div className="dot-shape" style={{ width:19,height:19, top:'53%',    left:'69%',  animation:'drift5 6.6s ease-in-out infinite 0.7s' }} />
+          <div className="dot-shape" style={{ width:8, height:8,  top:'10%',    left:'59%',  animation:'drift1 3.9s ease-in-out infinite 0.2s' }} />
+          <div className="dot-shape" style={{ width:12,height:12, bottom:'47%', right:'29%', animation:'drift2 5.1s ease-in-out infinite 0.8s' }} />
+
+          {/* Text */}
+          <div style={{ position:'relative', zIndex:2 }}>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'5px 13px', borderRadius:999, background:'rgba(255,255,255,0.15)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.25)', marginBottom:20 }}>
+              <span style={{ width:7,height:7,borderRadius:'50%',background:'#fff',boxShadow:'0 0 8px rgba(255,255,255,0.8)',animation:'glow 2s ease-in-out infinite',display:'inline-block' }} />
+              <span style={{ fontSize:11,fontWeight:700,letterSpacing:2,color:'rgba(255,255,255,0.90)',textTransform:'uppercase' }}>Hope PMS</span>
+            </div>
+
+            <h1 style={{ fontFamily:"'DM Serif Display',serif", fontSize:'clamp(36px,4vw,58px)', fontWeight:400, color:'#fff', lineHeight:1.10, margin:'0 0 16px', letterSpacing:'-0.5px' }}>
+              Welcome<br />
+              <em style={{ fontStyle:'italic', color:'rgba(255,255,255,0.85)' }}>Back</em>
             </h1>
-            <p className="text-sm text-white/75 leading-relaxed max-w-xs">
-              Log in to access your dashboard and manage your workspace.
+            <p style={{ fontSize:14, color:'rgba(255,255,255,0.70)', lineHeight:1.75, margin:0, maxWidth:300 }}>
+              Log in to access your dashboard and manage your workspace at{' '}
+              <strong style={{ color:'rgba(255,255,255,0.92)', fontWeight:600 }}>HOPE, INC.</strong>
             </p>
+
+            <div style={{ marginTop:28, display:'flex', alignItems:'center', gap:12 }}>
+              <span style={{ width:32,height:2,borderRadius:999,background:'rgba(255,255,255,0.35)' }} />
+              <span style={{ width:10,height:10,borderRadius:'50%',border:'2px solid rgba(255,255,255,0.35)',display:'inline-block' }} />
+              <span style={{ width:18,height:2,borderRadius:999,background:'rgba(255,255,255,0.20)' }} />
+            </div>
           </div>
         </div>
 
-        {/* ── RIGHT PANEL ── */}
-        <div className="flex flex-[2] flex-col justify-center px-16 bg-white border-l border-[#f0eef8]"
-             style={{ maxWidth: '40vw', minWidth: 300 }}>
+        {/* ════════ RIGHT PANEL ════════ */}
+        <div style={{
+          flex: '2 1 0',
+          maxWidth: '40vw',
+          minWidth: 340,
+          background: '#ffffff',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          padding: '48px 52px',
+          overflow: 'hidden',   /* no scroll */
+          borderLeft: '1px solid #f0edf8',
+        }}>
 
-          <p className="fade-in-1 text-[10px] font-bold tracking-[2.8px] text-[#b91c1c] uppercase mb-2.5">
-            Internal Access
-          </p>
-          <h2 className="fade-in-2 font-dm-serif title-clamp font-normal text-[#0f0a1e] mb-5 tracking-tight">
-            Sign in to<br />account
+          {/* Eyebrow */}
+          <div className="f1" style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+            <span style={{ width:22,height:2,borderRadius:999,background:'linear-gradient(90deg,#b91c1c,#e11d48)' }} />
+            <span style={{ fontSize:10,fontWeight:700,letterSpacing:3,color:'#b91c1c',textTransform:'uppercase' }}>Internal Access</span>
+          </div>
+
+          {/* Title */}
+          <h2 className="f2" style={{ fontFamily:"'DM Serif Display',serif", fontSize:'clamp(22px,2.2vw,30px)', fontWeight:400, color:'#0f0a1e', margin:'0 0 4px', lineHeight:1.20, letterSpacing:'-0.4px' }}>
+            Sign in to your account
           </h2>
+          <p className="f2" style={{ fontSize:12.5, color:'#a89ec0', margin:'0 0 22px', lineHeight:1.6 }}>
+            Enter your credentials to continue.
+          </p>
 
-          {/* Error Message Display */}
+          {/* Error */}
           {errorMsg && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-xs rounded-lg">
+            <div style={{ marginBottom:14, padding:'10px 14px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10, fontSize:12, color:'#b91c1c', display:'flex', alignItems:'flex-start', gap:8 }}>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" style={{ flexShrink:0, marginTop:1 }}>
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
               {errorMsg}
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="fade-in-3 flex flex-col gap-4">
-            
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-[#2d2640]">Email address</label>
-              <input
-                type="email"
-                required
-                placeholder="you@example.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="input-focus w-full px-3.5 py-2.5 bg-[#fafafa] border border-[#e2ddf0] rounded-xl text-sm transition-all"
-              />
+          <form onSubmit={handleLogin} style={{ display:'flex', flexDirection:'column', gap:14 }}>
+
+            {/* Email */}
+            <div className="f3" style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:'#3d3350' }}>Email address</label>
+              <input className="inp" type="email" required placeholder="you@example.com"
+                value={email} onChange={e => setEmail(e.target.value)} />
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-[#2d2640]">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="Enter password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="input-focus w-full px-3.5 py-2.5 bg-[#fafafa] border border-[#e2ddf0] rounded-xl text-sm transition-all"
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-medium text-[#9d95b8] hover:text-[#b91c1c] transition-colors py-1 px-1.5"
-                >
+            {/* Password */}
+            <div className="f4" style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <label style={{ fontSize:12, fontWeight:600, color:'#3d3350' }}>Password</label>
+                <a href="#" style={{ fontSize:11, fontWeight:500, color:'#b91c1c', textDecoration:'none' }}
+                   onMouseEnter={e => e.currentTarget.style.textDecoration='underline'}
+                   onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>
+                  Forgot password?
+                </a>
+              </div>
+              <div style={{ position:'relative' }}>
+                <input className="inp" type={showPassword ? 'text' : 'password'} required
+                  placeholder="Enter your password"
+                  value={password} onChange={e => setPassword(e.target.value)}
+                  style={{ paddingRight:52 }} />
+                <button type="button" tabIndex={-1} onClick={() => setShowPassword(!showPassword)}
+                  style={{ position:'absolute', right:13, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#a89ec0', fontSize:11, fontWeight:600, fontFamily:"'DM Sans',sans-serif", padding:'3px 5px', transition:'color .15s' }}
+                  onMouseEnter={e => e.currentTarget.style.color='#b91c1c'}
+                  onMouseLeave={e => e.currentTarget.style.color='#a89ec0'}>
                   {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 py-3 rounded-xl text-white font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-70 cursor-pointer"
-              style={{ background: 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 60%, #e11d48 100%)' }}
-            >
-              {loading ? 'Authenticating...' : 'Sign In'}
-            </button>
-
-            <div className="flex items-center gap-3">
-              <span className="flex-1 h-px bg-[#e8e3f5]" />
-              <span className="text-[10px] font-bold text-[#c2bcd8] uppercase tracking-wider">or</span>
-              <span className="flex-1 h-px bg-[#e8e3f5]" />
+            {/* Sign In */}
+            <div className="f5">
+              <button type="submit" disabled={loading} className="btn-primary">
+                {loading
+                  ? <span style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:9 }}>
+                      <span style={{ width:15,height:15,borderRadius:'50%',border:'2px solid rgba(255,255,255,0.4)',borderTopColor:'#fff',animation:'spin .7s linear infinite',display:'inline-block' }} />
+                      Authenticating…
+                    </span>
+                  : 'Sign In'}
+              </button>
             </div>
 
-            {/* ── FIXED GOOGLE BUTTON ── */}
-            <button
-              type="button"
-              className="w-full flex items-center justify-center gap-3 py-3 bg-[#fbfaff] border-2 border-[#d6cff0] rounded-full text-sm font-semibold text-[#2d2640] transition-all duration-200 hover:bg-[#f5f2ff] hover:border-[#b8addf] hover:-translate-y-px active:scale-[0.98] active:translate-y-0"
-              style={{ boxShadow: '0 2px 10px rgba(214,207,240,0.3)' }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Continue with Google
-            </button>
+            {/* Divider */}
+            <div className="f5" style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <span style={{ flex:1,height:1,background:'linear-gradient(90deg,transparent,#e8e3f5)' }} />
+              <span style={{ fontSize:10,fontWeight:700,color:'#c8c2d8',textTransform:'uppercase',letterSpacing:2 }}>or</span>
+              <span style={{ flex:1,height:1,background:'linear-gradient(90deg,#e8e3f5,transparent)' }} />
+            </div>
+
+            {/* Google */}
+            <div className="f6">
+              <button type="button" onClick={handleGoogleLogin} className="btn-google">
+                <svg width="17" height="17" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                Continue with Google
+              </button>
+            </div>
+
           </form>
 
-          <p className="mt-6 text-center text-xs text-[#9d95b8]">
+          {/* Footer */}
+          <p className="f7" style={{ marginTop:18, textAlign:'center', fontSize:12, color:'#b0a8c8' }}>
             Don't have an account?{' '}
-            <Link to="/register" className="font-bold text-[#b91c1c] hover:underline">
+            <Link to="/register" style={{ color:'#b91c1c', fontWeight:700, textDecoration:'none' }}
+              onMouseEnter={e => e.currentTarget.style.textDecoration='underline'}
+              onMouseLeave={e => e.currentTarget.style.textDecoration='none'}>
               Register here
             </Link>
           </p>
+
+          {/* Trust badge */}
+          <div style={{ marginTop:18, paddingTop:16, borderTop:'1px solid #f3f0fa', display:'flex', alignItems:'center', justifyContent:'center', gap:7 }}>
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#c4bdd8" strokeWidth="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span style={{ fontSize:10, color:'#c4bdd8', letterSpacing:1, fontWeight:500 }}>Secured by Supabase Auth</span>
+          </div>
         </div>
+
       </div>
     </>
   );
