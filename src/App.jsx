@@ -21,7 +21,21 @@ function App() {
             </ProtectedRoute>
           } 
         />
-        {/* CHANGE THIS LINE: Redirect "/" to "/login" instead of "/dashboard" */}
+
+        {/* Add more protected pages here:
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <Inventory />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+        */}
+
+        {/* ── Global redirect ── */}
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
