@@ -325,7 +325,6 @@ const AppShell = ({ children }) => {
             </div>
           </header>
 
-
           {/* Corrected Content Container */}
           <main style={{
             flex: 1,
