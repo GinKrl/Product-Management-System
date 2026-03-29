@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login        from './pages/Login';
-import Register     from './pages/Register';
-import Dashboard    from './pages/Dashboard';
-import AppShell     from './components/AppShell';  // PR-03
+import Login          from './pages/Login';
+import Register       from './pages/Register';
+import Dashboard      from './pages/Dashboard';
+import AppShell       from './components/AppShell';
 import ProtectedRoute from './components/ProtectedRoute';
-
+import AuthCallback   from './pages/AuthCallback';
 
 function App() {
   return (
@@ -15,10 +15,10 @@ function App() {
         <Route path="/login"    element={<Login />} />
         <Route path="/register" element={<Register />} />
 
+        {/* ── Auth callback for Google OAuth ── */}
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
-
-
-        {/* ── Protected routes wrapped in AppShell (PR-03) ── */}
+        {/* ── Protected routes wrapped in AppShell ── */}
         <Route
           path="/dashboard"
           element={
@@ -30,24 +30,11 @@ function App() {
           }
         />
 
-
-        {/* Add more protected pages here:
-        <Route
-          path="/inventory"
-          element={
-            <ProtectedRoute>
-              <AppShell>
-                <Inventory />
-              </AppShell>
-            </ProtectedRoute>
-          }
-        />
-        {/* CHANGE THIS LINE: Redirect "/" to "/login" instead of "/dashboard" */}
+        {/* Redirect "/" to "/login" */}
         <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
 }
-
 
 export default App;

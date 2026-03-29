@@ -15,7 +15,6 @@ const Login = () => {
     setLoading(true);
     setErrorMsg('');
 
-    // Logic: Felix's Supabase Auth Connection
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -25,9 +24,18 @@ const Login = () => {
       setErrorMsg(error.message);
       setLoading(false);
     } else {
-      // Success! Move to the products page or dashboard
-      navigate('/products');
+      navigate('/dashboard');
     }
+  };
+
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    if (error) console.error("Login error:", error.message);
   };
 
   return (
@@ -83,7 +91,6 @@ const Login = () => {
             Sign in to<br />account
           </h2>
 
-          {/* Error Message Display */}
           {errorMsg && (
             <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-xs rounded-lg">
               {errorMsg}
@@ -141,9 +148,9 @@ const Login = () => {
               <span className="flex-1 h-px bg-[#e8e3f5]" />
             </div>
 
-            {/* ── FIXED GOOGLE BUTTON ── */}
             <button
               type="button"
+              onClick={handleGoogleLogin}
               className="w-full flex items-center justify-center gap-3 py-3 bg-[#fbfaff] border-2 border-[#d6cff0] rounded-full text-sm font-semibold text-[#2d2640] transition-all duration-200 hover:bg-[#f5f2ff] hover:border-[#b8addf] hover:-translate-y-px active:scale-[0.98] active:translate-y-0"
               style={{ boxShadow: '0 2px 10px rgba(214,207,240,0.3)' }}
             >
