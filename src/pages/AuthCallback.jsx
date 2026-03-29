@@ -17,16 +17,30 @@ const AuthCallback = () => {
     const t1 = setTimeout(() => setStep(1), 900);
     const t2 = setTimeout(() => setStep(2), 1800);
 
+    // FIX: Immediate check for session (This fixes the "stuck" issue)
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Short delay so the user can actually see your cool "Loading your workspace" step
+        setTimeout(() => navigate('/dashboard'), 2000);
+      }
+    };
+
+    checkSession();
+
+    // Listener for auth state changes (e.g., initial session or sign in)
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        setTimeout(() => navigate('/dashboard'), 600);
+      if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+        setTimeout(() => navigate('/dashboard'), 1500);
       }
     });
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
-      authListener.subscription.unsubscribe();
+      if (authListener?.subscription) {
+        authListener.subscription.unsubscribe();
+      }
     };
   }, [navigate]);
 
@@ -92,7 +106,6 @@ const AuthCallback = () => {
           overflow: hidden;
         }
 
-        /* Background shapes */
         .bg-orb {
           position: absolute;
           border-radius: 50%;
@@ -114,7 +127,6 @@ const AuthCallback = () => {
           pointer-events: none;
         }
 
-        /* Card */
         .auth-card {
           position: relative;
           z-index: 10;
@@ -132,7 +144,6 @@ const AuthCallback = () => {
           backdrop-filter: blur(20px);
         }
 
-        /* Logo mark */
         .logo-mark {
           width: 56px;
           height: 56px;
@@ -149,7 +160,6 @@ const AuthCallback = () => {
           letter-spacing: -1px;
         }
 
-        /* Spinner ring */
         .spinner-wrap {
           position: relative;
           width: 72px;
@@ -186,7 +196,6 @@ const AuthCallback = () => {
           border-right-color: rgba(185,28,28,0.3);
           animation: spin 0.9s linear infinite;
         }
-        /* H icon in centre of spinner */
         .spinner-inner {
           position: absolute;
           inset: 0;
@@ -199,7 +208,6 @@ const AuthCallback = () => {
           letter-spacing: -1px;
         }
 
-        /* Text */
         .auth-title {
           font-family: 'DM Serif Display', serif;
           font-size: 22px;
@@ -214,7 +222,6 @@ const AuthCallback = () => {
           line-height: 1.6;
         }
 
-        /* Step indicator */
         .step-text {
           font-size: 12px;
           font-weight: 600;
@@ -224,7 +231,6 @@ const AuthCallback = () => {
           animation: step-in 0.3s ease both;
         }
 
-        /* Progress bar */
         .progress-track {
           width: 100%;
           height: 3px;
@@ -241,7 +247,6 @@ const AuthCallback = () => {
           animation: bar-fill 2.8s ease both, shimmer 1.5s linear infinite;
         }
 
-        /* Dots */
         .dots {
           display: flex;
           align-items: center;
@@ -261,7 +266,6 @@ const AuthCallback = () => {
           transform: scale(1.3);
         }
 
-        /* Brand footer */
         .brand-footer {
           margin-top: 28px;
           padding-top: 20px;
@@ -280,35 +284,24 @@ const AuthCallback = () => {
       `}</style>
 
       <div className="auth-root">
-
-        {/* ── BACKGROUND SHAPES ── */}
-        {/* Orbs */}
         <div className="bg-orb" style={{ width:320, height:320, top:'-5%', left:'-4%', background:'radial-gradient(circle,rgba(255,80,80,0.28) 0%,transparent 70%)', filter:'blur(2px)', animation:'orb-pulse 6s ease-in-out infinite' }} />
         <div className="bg-orb" style={{ width:240, height:240, bottom:'5%', right:'-3%', background:'radial-gradient(circle,rgba(255,160,60,0.22) 0%,transparent 70%)', filter:'blur(2px)', animation:'orb-pulse 8s ease-in-out infinite 2s' }} />
         <div className="bg-orb" style={{ width:180, height:180, top:'40%', right:'15%', background:'radial-gradient(circle,rgba(255,255,255,0.10) 0%,transparent 70%)', animation:'orb-pulse 7s ease-in-out infinite 1s' }} />
 
-        {/* Glass pills */}
         <div className="glass-pill" style={{ width:140, height:40, top:'18%', left:'8%',  animation:'drift1 5s ease-in-out infinite' }} />
         <div className="glass-pill" style={{ width:100, height:30, top:'30%', right:'10%', animation:'drift2 6.5s ease-in-out infinite 0.8s' }} />
         <div className="glass-pill" style={{ width:180, height:46, bottom:'18%', left:'12%', animation:'drift3 4.8s ease-in-out infinite 1.1s' }} />
         <div className="glass-pill" style={{ width:80,  height:24, bottom:'30%', right:'8%',  animation:'drift1 5.5s ease-in-out infinite 0.4s' }} />
 
-        {/* Streaks */}
         <div className="streak" style={{ width:90,  height:12, top:'12%',    right:'22%', animation:'drift2 4.2s ease-in-out infinite 0.3s' }} />
         <div className="streak" style={{ width:60,  height:10, bottom:'22%', right:'28%', animation:'drift3 5.8s ease-in-out infinite 1.2s' }} />
         <div className="streak" style={{ width:110, height:13, top:'60%',    left:'6%',   animation:'drift1 6.2s ease-in-out infinite 0.7s' }} />
 
-        {/* Rings */}
         <div style={{ position:'absolute', width:80, height:80, top:'8%', right:'35%', borderRadius:'50%', border:'2px solid rgba(255,255,255,0.20)', animation:'drift2 7s ease-in-out infinite 0.5s' }} />
         <div style={{ position:'absolute', width:50, height:50, bottom:'35%', left:'30%', borderRadius:'50%', border:'2px solid rgba(255,255,255,0.18)', animation:'drift3 5.2s ease-in-out infinite 1.4s' }} />
 
-        {/* ── AUTH CARD ── */}
         <div className="auth-card">
-
-          {/* Logo */}
           <div className="logo-mark">H</div>
-
-          {/* Spinner */}
           <div className="spinner-wrap">
             <div className="pulse-ring" />
             <div className="pulse-ring-2" />
@@ -318,34 +311,28 @@ const AuthCallback = () => {
             </div>
           </div>
 
-          {/* Copy */}
           <h2 className="auth-title">Establishing Session</h2>
           <p className="auth-sub">
             Welcome to <strong style={{ color:'#0f0a1e', fontWeight:700 }}>HOPE, INC.</strong><br />
             Securely connecting you to your workspace.
           </p>
 
-          {/* Step text */}
           <p className="step-text" key={step}>{steps[step]}</p>
 
-          {/* Progress bar */}
           <div className="progress-track">
             <div className="progress-bar" />
           </div>
 
-          {/* Step dots */}
           <div className="dots">
             {steps.map((_, i) => (
               <div key={i} className={`dot${i <= step ? ' active' : ''}`} />
             ))}
           </div>
 
-          {/* Brand footer */}
           <div className="brand-footer">
             <strong>Hope PMS</strong> &nbsp;·&nbsp; Secure Authentication
           </div>
         </div>
-
       </div>
     </>
   );
