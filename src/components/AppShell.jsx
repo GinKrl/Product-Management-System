@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext'; 
+import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 
+
 // ── AppShell ──────────────────────────────────────────────────
+
 
 const NAV_ITEMS = [
   {
@@ -107,30 +109,36 @@ const NAV_ITEMS = [
   },
 ];
 
+
 const canSee = (roles, userRole) => !roles || roles.includes(userRole);
+
 
 const AppShell = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  
+ 
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAuth();
 
+
   const userEmail = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
-  const userRole = 'admin'; 
+  const userRole = 'admin';
+
 
   const SIDEBAR_W = 232;
   const COLLAPSED_W = 64;
   const NAVBAR_H = 56;
   const effectiveW = sidebarOpen ? SIDEBAR_W : COLLAPSED_W;
 
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
   };
+
 
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
@@ -139,6 +147,7 @@ const AppShell = ({ children }) => {
       setSidebarOpen(s => !s);
     }
   };
+
 
   return (
     <>
@@ -173,11 +182,13 @@ const AppShell = ({ children }) => {
         .sidebar-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
       `}</style>
 
+
       <div
         style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'DM Sans',sans-serif" }}
         onClick={() => userMenuOpen && setUserMenuOpen(false)}
       >
         {mobileOpen && <div className="mobile-overlay" onClick={() => setMobileOpen(false)} />}
+
 
         {/* Sidebar */}
         <aside
@@ -217,11 +228,13 @@ const AppShell = ({ children }) => {
             )}
           </div>
 
+
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
               if (!canSee(section.roles, userRole)) return null;
               const visibleItems = section.items.filter(item => canSee(item.roles, userRole));
               if (visibleItems.length === 0) return null;
+
 
               return (
                 <div key={section.section} style={{ marginBottom: 4 }}>
@@ -259,6 +272,7 @@ const AppShell = ({ children }) => {
             })}
           </nav>
 
+
           {/* User Footer */}
           <div style={{ padding: sidebarOpen ? '12px 14px' : '12px 8px', borderTop: '1px solid rgba(0,0,0,0.06)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 12, background: '#f9fafb', border: '1px solid #f3f4f6', justifyContent: sidebarOpen ? 'flex-start' : 'center' }}>
@@ -277,9 +291,10 @@ const AppShell = ({ children }) => {
           </div>
         </aside>
 
+
         {/* Main Area */}
         <div className="shell-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-          
+         
           {/* Fixed Navbar */}
           <header style={{
             position: 'absolute', top: 0, left: 0, right: 0,
@@ -294,7 +309,7 @@ const AppShell = ({ children }) => {
               <span style={{ fontSize: 11, color: '#d1d5db' }}>HOPE, INC.</span><span style={{ fontSize: 11, color: '#e5e7eb' }}>/</span>
               <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Overview</span>
             </div>
-            
+           
             {/* User Menu */}
             <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
               <button onClick={() => setUserMenuOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px 5px 6px', borderRadius: 10, border: `1px solid ${userMenuOpen ? '#fca5a5' : '#e5e7eb'}`, background: userMenuOpen ? '#fef2f2' : '#fff', cursor: 'pointer' }}>
@@ -311,11 +326,11 @@ const AppShell = ({ children }) => {
           </header>
 
           {/* Corrected Content Container */}
-          <main style={{ 
-            flex: 1, 
-            overflowY: 'auto', 
+          <main style={{
+            flex: 1,
+            overflowY: 'auto',
             background: 'linear-gradient(160deg,#f8f9fc 0%,#f0f2f5 100%)',
-            paddingTop: NAVBAR_H, 
+            paddingTop: NAVBAR_H,
           }}>
             <div style={{ padding: '32px 24px' }}>
               {children}
@@ -326,5 +341,6 @@ const AppShell = ({ children }) => {
     </>
   );
 };
+
 
 export default AppShell;

@@ -1,17 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { productService } from '../services/productService.js';
 
+
 // ─────────────────────────────────────────────────────────────
 // Dashboard — content only.
 // The sidebar, navbar, and layout wrapper live in AppShell.jsx
 // (PR-03). Do NOT add a sidebar or full-screen flex wrapper here.
 // ─────────────────────────────────────────────────────────────
 
+
 const Dashboard = () => {
   const [products, setProducts] = useState([]);
   const [loading,  setLoading]  = useState(true);
 
+
   useEffect(() => { fetchProducts(); }, []);
+
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -20,9 +24,9 @@ const Dashboard = () => {
     setLoading(false);
   };
 
-  
   const totalValue = products.reduce((acc, p) => acc + (p.price * p.stock), 0).toFixed(2);
   const lowStock   = products.filter(p => p.stock < 10).length;
+
 
   const stats = [
     {
@@ -55,6 +59,7 @@ const Dashboard = () => {
     },
   ];
 
+
   return (
     <>
       <style>{`
@@ -81,7 +86,9 @@ const Dashboard = () => {
         .add-btn:hover { transform:translateY(-1px); }
       `}</style>
 
+
       <div className="dash-bg">
+
 
         {/* ── TOP HEADER ── */}
         <div className="top-bar">
@@ -99,6 +106,7 @@ const Dashboard = () => {
             </p>
           </div>
 
+
           <div style={{ display:'flex', alignItems:'center', gap:10 }} className="f1">
             {/* Refresh */}
             <button
@@ -113,6 +121,7 @@ const Dashboard = () => {
               </svg>
             </button>
 
+
             {/* Add Product */}
             <button
               className="add-btn"
@@ -126,8 +135,10 @@ const Dashboard = () => {
           </div>
         </div>
 
+
         {/* ── BODY ── */}
         <div style={{ padding:'24px 32px', display:'flex', flexDirection:'column', gap:22 }}>
+
 
           {/* Stat cards */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:18 }}>
@@ -149,8 +160,10 @@ const Dashboard = () => {
             ))}
           </div>
 
+
           {/* Product table */}
           <div className="f5" style={{ background:'#fff', borderRadius:18, border:'1px solid rgba(0,0,0,0.06)', boxShadow:'0 1px 4px rgba(0,0,0,0.05)', overflow:'hidden' }}>
+
 
             {/* Toolbar */}
             <div style={{ padding:'16px 24px', borderBottom:'1px solid #f3f4f6', display:'flex', alignItems:'center', justifyContent:'space-between', gap:16 }}>
@@ -171,6 +184,8 @@ const Dashboard = () => {
                 />
               </label>
             </div>
+
+
 
 
             {/* Table */}
@@ -259,6 +274,7 @@ const Dashboard = () => {
               </tbody>
             </table>
 
+
             {/* Table footer */}
             {!loading && products.length > 0 && (
               <div style={{ padding:'12px 24px', borderTop:'1px solid #f3f4f6', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -274,10 +290,12 @@ const Dashboard = () => {
             )}
           </div>
 
+
         </div>
       </div>
     </>
   );
 };
+
 
 export default Dashboard;
