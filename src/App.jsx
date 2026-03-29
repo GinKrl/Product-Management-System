@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login         from './pages/Login';
-import Register      from './pages/Register';
-import Dashboard     from './pages/Dashboard';
-import AuthCallback  from './pages/AuthCallback'; // Added for PR-04
-import AppShell      from './components/AppShell';  // PR-03
+import Login          from './pages/Login';
+import Register       from './pages/Register';
+import Dashboard      from './pages/Dashboard';
+import AppShell       from './components/AppShell';
 import ProtectedRoute from './components/ProtectedRoute';
+import AuthCallback   from './pages/AuthCallback';
 
 function App() {
   return (
@@ -14,12 +14,11 @@ function App() {
         {/* ── Public routes ── */}
         <Route path="/login"    element={<Login />} />
         <Route path="/register" element={<Register />} />
-        
-        {/* ── Auth Callback Route (PR-04) ── */}
-        {/* This must be public to handle the redirect from Supabase/Google */}
+
+        {/* ── Auth callback for Google OAuth ── */}
         <Route path="/auth/callback" element={<AuthCallback />} />
 
-        {/* ── Protected routes wrapped in AppShell (PR-03) ── */}
+        {/* ── Protected routes wrapped in AppShell ── */}
         <Route
           path="/dashboard"
           element={
