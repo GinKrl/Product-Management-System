@@ -1,35 +1,26 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login        from './pages/Login';
-import Register     from './pages/Register';
-import Dashboard    from './pages/Dashboard';
-import AuthCallback from './pages/AuthCallback';   // PR-04
-import AppShell     from './components/AppShell';  // PR-03
+import Login from './pages/Login';
+import Register from './pages/Register'; 
 import ProtectedRoute from './components/ProtectedRoute';
+
+// Placeholder for Dashboard (Felix will fill this later)
+const Dashboard = () => <div className="p-8"><h1>Welcome to the Dashboard</h1></div>;
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ── Public routes ── */}
-        <Route path="/login"    element={<Login />} />
-        <Route path="/register" element={<Register />} />
-
-        {/* ── Auth callback (PR-04) — no shell, no auth guard ── */}
-        <Route path="/auth/callback" element={<AuthCallback />} />
-
-        {/* ── Protected routes wrapped in AppShell (PR-03) ── */}
-        <Route
-          path="/dashboard"
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} /> 
+        <Route 
+          path="/dashboard" 
           element={
             <ProtectedRoute>
-              <AppShell>
-                <Dashboard />
-              </AppShell>
+              <Dashboard />
             </ProtectedRoute>
-          }
+          } 
         />
-        
 
         {/* Add more protected pages here:
         <Route
