@@ -22,6 +22,7 @@ function App() {
           } 
         />
 
+
         {/* Add more protected pages here:
         <Route
           path="/inventory"

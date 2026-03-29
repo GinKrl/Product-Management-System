@@ -20,6 +20,7 @@ const Dashboard = () => {
     setLoading(false);
   };
 
+  
   const totalValue = products.reduce((acc, p) => acc + (p.price * p.stock), 0).toFixed(2);
   const lowStock   = products.filter(p => p.stock < 10).length;
 
