@@ -10,17 +10,57 @@ const ErrorTooltip = ({ message }) => (
 );
 
 const Register = () => {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     
-    // TODO: Felix — attach Supabase sign-up here
-    // e.g. await supabase.auth.signUp({ email, password, options: { data: { name } } })
+    // 1. Basic Validation
+    const newErrors = {};
+    if (!name.trim()) newErrors.name = 'Full name is required';
+    if (!email.trim()) newErrors.email = 'Email is required';
+    if (password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setLoading(false);
+      return;
+    }
+
+    // 2. Supabase Sign-up
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: name } // Stores the name in Supabase auth metadata
+        }
+      });
+
+      if (error) throw error;
+      
+      // Check if email confirmation is required by your Supabase settings
+      if (data?.user?.identities?.length === 0) {
+         setErrors({ email: 'This email is already registered.' });
+         setLoading(false);
+         return;
+      }
+
+      // 3. Success -> Route to login
+      navigate('/login'); 
+      
+    } catch (error) {
+      setErrors({ email: error.message }); 
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -59,7 +99,6 @@ const Register = () => {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
         }
-
         .anim-drift1 { animation: drift1 5.0s ease-in-out infinite; }
         .anim-drift2 { animation: drift2 6.2s ease-in-out infinite 0.8s; }
         .anim-drift3 { animation: drift3 4.5s ease-in-out infinite 1.2s; }
@@ -144,24 +183,23 @@ const Register = () => {
                style={{ background: 'radial-gradient(circle, rgba(255,160,60,0.25) 0%, transparent 70%)', filter: 'blur(2px)' }} />
           <div className="absolute top-[40%] left-[50%] w-36 h-36 rounded-full anim-pulse3"
                style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%)' }} />
-
           <div className="absolute glass-pill rounded-full anim-drift1"  style={{ width:160, height:46, bottom:'26%', left:'6%' }} />
-          <div className="absolute glass-pill rounded-full anim-drift2"  style={{ width:120, height:36, top:'20%',   left:'28%' }} />
+          <div className="absolute glass-pill rounded-full anim-drift2"  style={{ width:120, height:36, top:'20%',  left:'28%' }} />
           <div className="absolute glass-pill rounded-full anim-drift3"  style={{ width:200, height:52, bottom:'12%', left:'34%' }} />
 
-          <div className="absolute rounded-full anim-drift4"  style={{ width:100, height:16, top:'15%',   left:'12%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
-          <div className="absolute rounded-full anim-drift5"  style={{ width:70,  height:12, top:'35%',   left:'55%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
+          <div className="absolute rounded-full anim-drift4"  style={{ width:100, height:16, top:'15%',  left:'12%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
+          <div className="absolute rounded-full anim-drift5"  style={{ width:70,  height:12, top:'35%',  left:'55%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
           <div className="absolute rounded-full anim-drift1b" style={{ width:130, height:14, bottom:'20%', left:'50%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
-          <div className="absolute rounded-full anim-drift2b" style={{ width:55,  height:10, top:'60%',   left:'20%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
+          <div className="absolute rounded-full anim-drift2b" style={{ width:55,  height:10, top:'60%',  left:'20%', background:'rgba(255,255,255,0.22)', border:'1px solid rgba(255,255,255,0.20)' }} />
 
           {/* Dots */}
-          <div className="absolute rounded-full anim-drift3b" style={{ width:14, height:14, top:'28%',   left:'42%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
+          <div className="absolute rounded-full anim-drift3b" style={{ width:14, height:14, top:'28%',  left:'42%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
           <div className="absolute rounded-full anim-drift4b" style={{ width:10, height:10, bottom:'35%', left:'65%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
-          <div className="absolute rounded-full anim-drift5b" style={{ width:18, height:18, top:'55%',   left:'72%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
-          <div className="absolute rounded-full anim-drift1c" style={{ width:8,  height:8,  top:'12%',   left:'62%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
+          <div className="absolute rounded-full anim-drift5b" style={{ width:18, height:18, top:'55%',  left:'72%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
+          <div className="absolute rounded-full anim-drift1c" style={{ width:8,  height:8,  top:'12%',  left:'62%', background:'rgba(255,255,255,0.35)', boxShadow:'0 0 12px rgba(255,255,255,0.20)' }} />
 
           {/* Rings */}
-          <div className="absolute rounded-full anim-drift2c" style={{ width:70, height:70, top:'10%',    left:'48%', border:'2px solid rgba(255,255,255,0.22)', background:'transparent' }} />
+          <div className="absolute rounded-full anim-drift2c" style={{ width:70, height:70, top:'10%',   left:'48%', border:'2px solid rgba(255,255,255,0.22)', background:'transparent' }} />
           <div className="absolute rounded-full anim-drift3c" style={{ width:45, height:45, bottom:'40%', left:'72%', border:'2px solid rgba(255,255,255,0.22)', background:'transparent' }} />
 
           {/* Text */}
@@ -187,8 +225,7 @@ const Register = () => {
           </h2>
 
           <form onSubmit={handleSubmit} className="fade-in-3 flex flex-col gap-3">
-
-            {/* Full Name */}
+        {/* Full Name */}
             <div className="relative flex flex-col gap-1.5">
               {errors.name && <ErrorTooltip message={errors.name} />}
               <label htmlFor="name" className="text-xs font-semibold text-[#2d2640] tracking-tight">
@@ -258,14 +295,14 @@ const Register = () => {
                 </button>
               </div>
             </div>
-
-            {/* Sign Up Button with Loading State */}
+                {/* Sign Up Button with Loading State */}
             <button
               type="submit"
-              className="btn-signin-glow w-full mt-1 py-2.5 rounded-xl text-white font-bold text-sm tracking-tight transition-all duration-200 active:scale-[0.98]"
+              disabled={loading}
+              className="btn-signin-glow w-full mt-1 py-2.5 rounded-xl text-white font-bold text-sm tracking-tight transition-all duration-200 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 60%, #e11d48 100%)', boxShadow: '0 4px 18px rgba(185,28,28,0.30)' }}
             >
-              Create Account
+              {loading ? 'Creating Account...' : 'Create Account'}
             </button>
 
             <div className="flex items-center gap-3 mt-1">
