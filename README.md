@@ -1,6 +1,4 @@
-# React + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# HOPE Product Management System (PMS)\n\nReact + Vite + Supabase Auth + Tailwind.\n\n## Quick Setup\n1. Clone repo\n2. `cp .env.example .env` & fill VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY\n3. `npm install`\n4. `npm run dev` (http://localhost:5173)\n\n## Testing\n`npm test` (Vitest + RTL)\n`npm run test:ui` (UI mode)\n\n## Features (Sprint 1)\n- Email/Google auth\n- Login guard (INACTIVE block)\n- Protected dashboard\n\nSee [docs/Sprint1-Log.md](docs/Sprint1-Log.md)
 
 Currently, two official plugins are available:
 
