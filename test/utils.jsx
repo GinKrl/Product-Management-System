@@ -1,6 +1,6 @@
+import React from 'react';
 import { render } from '@testing-library/react';
-import { React } from 'react';
-import { BrowserRouter, Routes, Route, MemoryRouter } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 
 const AllTheProviders = ({ children }) => {
   return <BrowserRouter>{children}</BrowserRouter>;
