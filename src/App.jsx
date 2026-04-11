@@ -6,6 +6,7 @@ import Dashboard      from './pages/Dashboard';
 import AppShell       from './components/AppShell';
 import ProtectedRoute from './components/ProtectedRoute';
 import AuthCallback   from './pages/AuthCallback';
+import ProductListPage from './pages/ProductListPage'; // <-- Added import
 
 function App() {
   return (
@@ -25,6 +26,18 @@ function App() {
             <ProtectedRoute>
               <AppShell>
                 <Dashboard />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ── Product Masterlist Route ── */}
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <ProductListPage />
               </AppShell>
             </ProtectedRoute>
           }

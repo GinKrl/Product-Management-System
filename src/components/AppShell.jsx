@@ -23,7 +23,7 @@ const NAV_ITEMS = [
       },
       {
         label: 'Products',
-        href: '#',
+        href: '/products', // <-- Updated to connect to your new page
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" />
@@ -117,7 +117,7 @@ const AppShell = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
- 
+  
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAuth();
@@ -125,7 +125,7 @@ const AppShell = ({ children }) => {
 
   const userEmail = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
-  const userRole = 'admin';
+  const userRole = 'admin'; // Hardcoded for now, adjust later when roles are mapped from Supabase
 
 
   const SIDEBAR_W = 232;
@@ -294,7 +294,7 @@ const AppShell = ({ children }) => {
 
         {/* Main Area */}
         <div className="shell-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-         
+          
           {/* Fixed Navbar */}
           <header style={{
             position: 'absolute', top: 0, left: 0, right: 0,
@@ -309,7 +309,7 @@ const AppShell = ({ children }) => {
               <span style={{ fontSize: 11, color: '#d1d5db' }}>HOPE, INC.</span><span style={{ fontSize: 11, color: '#e5e7eb' }}>/</span>
               <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Overview</span>
             </div>
-           
+            
             {/* User Menu */}
             <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
               <button onClick={() => setUserMenuOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px 5px 6px', borderRadius: 10, border: `1px solid ${userMenuOpen ? '#fca5a5' : '#e5e7eb'}`, background: userMenuOpen ? '#fef2f2' : '#fff', cursor: 'pointer' }}>
