@@ -183,14 +183,58 @@ usermodule_rights: (junction)
 
 ## Next Steps — Sprint 2 Preview
 
-Sprint 2 focuses on **Product Management** (CRUD with soft-delete), **Price History**, **Reports**, and **Rights Enforcement** in the UI.
+Sprint 2 — Rights Test Matrix
+test/sprint2-rights-matrix
+All 18 test cases executed against the live Supabase project.
+Rights values verified from UserModule_Rights seed data in HOpeDB-Rights-Scripts-4.txt.
+Each user was logged into the React app individually to confirm UI behavior, then re-verified via Supabase SQL editor using role impersonation.
 
-Key deliverables coming next:
-- Product listing page with `record_status = 'ACTIVE'` filter
-- Add / Edit / Soft-Delete product forms with RLS backing
-- Price history table per product
-- Product Report Listing (REP_001) and Top Selling Report (REP_002)
-- Sidebar items gated by rights values from `UserModule_Rights`
-- Admin Module: User activation/deactivation UI with SUPERADMIN protection
+Test Environment
 
+App: HopePMS (React 18 + Vite + Tailwind)
+Database: Supabase (PostgreSQL) — HopeDB + Rights Schema
+Users Tested:
+
+user1 — Jerry (SUPERADMIN)
+user2 — Maria (USER)
+user3 — Alex (ADMIN)
+
+
+Rights Tested: PRD_DEL, PRD_EDIT, PRD_ADD, REP_001, REP_002, ADM_USER
+
+
+Results
+user1 — Jerry (SUPERADMIN)
+
+TC#  Right ID  Description DB Value Expected   Result
+TC-01 PRD_DEL Product Deletion 1(ON) Delete button visible and functional ✅PASS
+TC-02 PRD_EDITProduct Edit 1(ON)Edit button visible and functional ✅PASS
+TC-03 PRD_ADDProduct Insertion 1(ON)Add button visible and functional ✅PASS
+TC-04 REP_001Product Report Listing 1(ON)Report Listing link visible in sidebar ✅PASS
+TC-05 REP_002Product Top Selling 1(ON)Top Selling link visible in sidebar ✅PASS
+TC-06 ADM_USERAdmin Activate User 1(ON)Admin Module link visible, Activate/Deactivate buttons enabled ✅PASS
+
+user2 — Maria (USER)
+TC#     Right ID    DescriptionDB   ValueExpected   Result
+TC-07 PRD_DELProduct Deletion 0(OFF)Delete button hidden — not rendered in DOM ✅PASS
+TC-08 PRD_EDITProduct Edit 1(ON)Edit button visible and functional ✅PASS
+TC-09 PRD_ADDProduct Insertion 1(ON)Add button visible and functional ✅PASS
+TC-10 REP_001Product Report Listing 1(ON)Report Listing link visible in sidebar ✅PASS
+TC-11 REP_002Product Top Selling 0(OFF)Top Selling link hidden from sidebar ✅PASS
+TC-12 ADM_USERAdmin Activate User 0(OFF)Admin Module link hidden — not rendered in sidebar ✅PASS
+
+user3 — Alex (ADMIN)
+TC#    Right ID     DescriptionDB   ValueExpected   Result
+TC-13 PRD_DELProduct Deletion 0(OFF) Delete button hidden — not rendered in DOM ✅PASS
+TC-14 PRD_EDITProduct Edit 1(ON) Edit button visible and functional ✅PASS
+TC-15 PRD_ADDProduct Insertion 1(ON) Add button visible and functional ✅PASS
+TC-16 REP_001Product Report Listing 1(ON) Report Listing link visible in sidebar ✅PASS
+TC-17 REP_002Product Top Selling 0(OFF) Top Selling link hidden from sidebar ✅PASS
+TC-18 ADM_USERAdmin Activate User 0(OFF) Admin Module link hidden — not rendered in sidebar ✅PASS
+
+Summary
+
+Total test cases: 18
+Passed: 18
+Failed: 0
 ---
