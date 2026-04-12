@@ -3,27 +3,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 
-
 // ── AppShell ──────────────────────────────────────────────────
-
 
 const NAV_ITEMS = [
   {
     section: 'Main',
     items: [
       {
-        label: 'Overview',
-        href: '/dashboard',
-        icon: (
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
-            <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
-            <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
-          </svg>
-        ),
-      },
-      {
         label: 'Products',
-        href: '/products', // <-- Updated to connect to your new page
+        href: '/products',
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" />
@@ -109,9 +97,7 @@ const NAV_ITEMS = [
   },
 ];
 
-
 const canSee = (roles, userRole) => !roles || roles.includes(userRole);
-
 
 const AppShell = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -122,23 +108,19 @@ const AppShell = ({ children }) => {
   const location = useLocation();
   const { currentUser } = useAuth();
 
-
   const userEmail = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
-  const userRole = 'admin'; // Hardcoded for now, adjust later when roles are mapped from Supabase
-
+  const userRole = 'admin'; 
 
   const SIDEBAR_W = 232;
   const COLLAPSED_W = 64;
   const NAVBAR_H = 56;
   const effectiveW = sidebarOpen ? SIDEBAR_W : COLLAPSED_W;
 
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
   };
-
 
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
@@ -147,7 +129,6 @@ const AppShell = ({ children }) => {
       setSidebarOpen(s => !s);
     }
   };
-
 
   return (
     <>
@@ -175,20 +156,16 @@ const AppShell = ({ children }) => {
           .shell-sidebar { position: fixed !important; top: 0 !important; left: 0 !important; height: 100% !important; z-index: 40 !important; transform: translateX(-100%); transition: transform 0.24s cubic-bezier(.4,0,.2,1), width 0s !important; width: ${SIDEBAR_W}px !important; }
           .shell-sidebar.mobile-open { transform: translateX(0); }
           .shell-main { margin-left: 0 !important; }
-          .search-bar { display: none !important; }
-          .user-name-display { display: none !important; }
         }
         .sidebar-scroll::-webkit-scrollbar { width: 4px; }
         .sidebar-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
       `}</style>
-
 
       <div
         style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'DM Sans',sans-serif" }}
         onClick={() => userMenuOpen && setUserMenuOpen(false)}
       >
         {mobileOpen && <div className="mobile-overlay" onClick={() => setMobileOpen(false)} />}
-
 
         {/* Sidebar */}
         <aside
@@ -228,13 +205,11 @@ const AppShell = ({ children }) => {
             )}
           </div>
 
-
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
               if (!canSee(section.roles, userRole)) return null;
               const visibleItems = section.items.filter(item => canSee(item.roles, userRole));
               if (visibleItems.length === 0) return null;
-
 
               return (
                 <div key={section.section} style={{ marginBottom: 4 }}>
@@ -272,7 +247,6 @@ const AppShell = ({ children }) => {
             })}
           </nav>
 
-
           {/* User Footer */}
           <div style={{ padding: sidebarOpen ? '12px 14px' : '12px 8px', borderTop: '1px solid rgba(0,0,0,0.06)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 12, background: '#f9fafb', border: '1px solid #f3f4f6', justifyContent: sidebarOpen ? 'flex-start' : 'center' }}>
@@ -291,7 +265,6 @@ const AppShell = ({ children }) => {
           </div>
         </aside>
 
-
         {/* Main Area */}
         <div className="shell-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
           
@@ -307,7 +280,7 @@ const AppShell = ({ children }) => {
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
               <span style={{ fontSize: 11, color: '#d1d5db' }}>HOPE, INC.</span><span style={{ fontSize: 11, color: '#e5e7eb' }}>/</span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Overview</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Products</span>
             </div>
             
             {/* User Menu */}
@@ -325,7 +298,6 @@ const AppShell = ({ children }) => {
             </div>
           </header>
 
-          {/* Corrected Content Container */}
           <main style={{
             flex: 1,
             overflowY: 'auto',
@@ -341,6 +313,5 @@ const AppShell = ({ children }) => {
     </>
   );
 };
-
 
 export default AppShell;

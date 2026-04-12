@@ -1,399 +1,946 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  getProducts,
+  addProduct,
+  updateProduct,
+  softDeleteProduct
+} from '../services/productService';
 
-// --- DUMMY DATA ---
-const DUMMY_PRODUCTS = [
-  { id: 1, prodCode: 'ITM-1001', description: 'Ergonomic Office Chair',       unit: 'pcs', currentPrice: 149.99, status: 'ACTIVE',   stamp: 'Updated 2 hrs ago' },
-  { id: 2, prodCode: 'ITM-1002', description: 'Wireless Mechanical Keyboard',  unit: 'pcs', currentPrice: 89.50,  status: 'ACTIVE',   stamp: 'Updated yesterday' },
-  { id: 3, prodCode: 'ITM-1003', description: '27-inch 4K Monitor',            unit: 'pcs', currentPrice: 320.00, status: 'INACTIVE', stamp: 'Discontinued' },
-  { id: 4, prodCode: 'ITM-1004', description: 'USB-C Hub (7-in-1)',             unit: 'pcs', currentPrice: 24.99,  status: 'ACTIVE',   stamp: 'Updated last week' },
-  { id: 5, prodCode: 'ITM-1005', description: 'Standing Desk Frame',            unit: 'set', currentPrice: 210.00, status: 'INACTIVE', stamp: 'Out of stock' },
-];
+import AddProductModal from '../components/AddProductModal';
+import EditProductModal from '../components/EditProductModal';
+import SoftDeleteDialog from '../components/SoftDeleteDialog';
 
 const ProductListPage = () => {
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentUserRole, setCurrentUserRole] = useState('ADMIN');
+  const [perms, setPerms] = useState({ PRD_ADD: 1, PRD_EDIT: 1, PRD_DEL: 1 });
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('ALL');
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [formData, setFormData] = useState({ prodcode: '', description: '', unit: '', current_price: '' });
+  const [toast, setToast] = useState(null);
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
 
-  const isAdmin = currentUserRole === 'ADMIN';
+  const isAdmin = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERADMIN';
 
-  const visibleProducts = DUMMY_PRODUCTS.filter(p => {
-    if (!isAdmin && p.status !== 'ACTIVE') return false;
-    if (filter !== 'ALL' && p.status !== filter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      return p.description.toLowerCase().includes(q) || p.prodCode.toLowerCase().includes(q);
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const fetchProductList = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getProducts(currentUserRole);
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+      showToast('Failed to load products.', 'error');
+    } finally {
+      setIsLoading(false);
     }
-    return true;
-  });
+  };
 
-  const activeCount = DUMMY_PRODUCTS.filter(p => p.status === 'ACTIVE').length;
-  const totalCount  = isAdmin ? DUMMY_PRODUCTS.length : activeCount;
-  const totalValue  = DUMMY_PRODUCTS
-    .filter(p => isAdmin || p.status === 'ACTIVE')
-    .reduce((s, p) => s + p.currentPrice, 0)
-    .toFixed(2);
+  useEffect(() => { fetchProductList(); }, [currentUserRole]);
+
+  const handleAddSubmit = async () => {
+    if (!formData.prodcode || !formData.description || !formData.unit) {
+      showToast('All fields are required.', 'error');
+      return;
+    }
+    try {
+      await addProduct({ ...formData, record_status: 'ACTIVE' });
+      setIsAddOpen(false);
+      // FIX: include current_price in reset
+      setFormData({ prodcode: '', description: '', unit: '', current_price: '' });
+      fetchProductList();
+      showToast('Product added successfully.');
+    } catch (error) {
+      console.error('Error adding product:', error);
+      showToast('Error adding product.', 'error');
+    }
+  };
+
+  const handleEditSubmit = async () => {
+    if (!formData.description || !formData.unit) {
+      showToast('Description and unit are required.', 'error');
+      return;
+    }
+    try {
+      // FIX: include current_price in the update payload
+      await updateProduct(selectedProduct.prodcode, {
+        description: formData.description,
+        unit: formData.unit,
+        current_price: formData.current_price,
+      });
+      setIsEditOpen(false);
+      fetchProductList();
+      showToast('Product updated successfully.');
+    } catch (error) {
+      console.error('Error updating product:', error);
+      showToast('Error updating product.', 'error');
+    }
+  };
+
+  const handleDeleteSubmit = async () => {
+    try {
+      await softDeleteProduct(selectedProduct.prodcode);
+      setIsDeleteOpen(false);
+      fetchProductList();
+      showToast('Product deactivated.');
+    } catch (error) {
+      console.error('Error deactivating product:', error);
+      showToast('Error deactivating product.', 'error');
+    }
+  };
+
+  const openEditModal = (p) => {
+    setSelectedProduct(p);
+    // FIX: include current_price when populating the edit form
+    setFormData({ prodcode: p.prodcode, description: p.description, unit: p.unit, current_price: p.current_price ?? '' });
+    setIsEditOpen(true);
+  };
+
+  const openDeleteModal = (p) => {
+    setSelectedProduct(p);
+    setIsDeleteOpen(true);
+  };
+
+  const handleSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  };
+
+  const visibleProducts = [...products]
+    .filter(p => {
+      if (!isAdmin && p.record_status === 'INACTIVE') return false;
+      if (filter !== 'ALL' && p.record_status !== filter) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        return p.description?.toLowerCase().includes(q) || p.prodcode?.toLowerCase().includes(q);
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (!sortCol) return 0;
+      let av = a[sortCol] ?? '', bv = b[sortCol] ?? '';
+      if (sortCol === 'current_price') { av = Number(av); bv = Number(bv); }
+      return sortDir === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+    });
+
+  const { totalCount, activeCount, totalValue } = useMemo(() => {
+    const active = products.filter(p => p.record_status === 'ACTIVE').length;
+    const total = isAdmin ? products.length : active;
+    const value = products
+      .filter(p => isAdmin || p.record_status === 'ACTIVE')
+      .reduce((s, p) => s + (Number(p.current_price) || 0), 0);
+    return { totalCount: total, activeCount: active, totalValue: value };
+  }, [products, isAdmin]);
+
+  const SortIcon = ({ col }) => {
+    if (sortCol !== col) return <span style={{opacity:.3,marginLeft:4,fontSize:10}}>⇅</span>;
+    return <span style={{marginLeft:4,fontSize:10,color:'#b91c1c'}}>{sortDir==='asc'?'↑':'↓'}</span>;
+  };
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
-        @keyframes fadeUp    { from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);} }
-        @keyframes livePulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+        :root {
+          --red-deep:   #7f1d1d;
+          --red-mid:    #b91c1c;
+          --red-bright: #e11d48;
+          --red-glow:   rgba(185,28,28,0.15);
+          --red-pale:   #fef2f2;
+          --ink:        #0c0a0f;
+          --ink-2:      #1f1c28;
+          --ink-3:      #374151;
+          --muted:      #9ca3af;
+          --border:     rgba(0,0,0,0.07);
+          --surface:    #ffffff;
+          --bg:         #f7f7f9;
+          --green-bg:   #f0fdf4;
+          --green-text: #15803d;
+          --amber-bg:   #fffbeb;
+          --amber-text: #b45309;
+          --blue-bg:    #eff6ff;
+          --blue-text:  #1d4ed8;
+          --violet-bg:  #f5f3ff;
+          --violet-text:#6d28d9;
+        }
 
-        .plp-bg {
-          background: linear-gradient(160deg, #f8f9fc 0%, #f0f2f5 100%);
-          min-height: 100%;
+        * { box-sizing: border-box; }
+
+        @keyframes fadeUp   { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+        @keyframes slideIn  { from{opacity:0;transform:scale(.97) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
+        @keyframes toastIn  { from{opacity:0;transform:translateX(24px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes spin     { to{transform:rotate(360deg)} }
+        @keyframes barGrow  { from{transform:scaleX(0)} to{transform:scaleX(1)} }
+        @keyframes numIn    { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+        /* ── Root ── */
+        .plp-root {
+          background: var(--bg);
+          min-height: 100vh;
           font-family: 'DM Sans', sans-serif;
+          color: var(--ink);
         }
 
-        /* TOP BAR */
+        /* ── Topbar ── */
         .plp-topbar {
-          position: sticky; top: 0; z-index: 20;
-          background: rgba(248,249,252,0.88);
-          backdrop-filter: blur(12px);
-          border-bottom: 1px solid rgba(0,0,0,0.06);
-          padding: 18px 32px;
-          display: flex; align-items: center; justify-content: space-between;
-          animation: fadeUp .38s ease both .04s;
+          position: sticky; top: 0; z-index: 30;
+          background: rgba(247,247,249,0.9);
+          backdrop-filter: blur(16px);
+          border-bottom: 1px solid var(--border);
+          padding: 0 36px;
+          height: 68px;
+          display: flex; align-items: center; justify-content: space-between; gap: 20px;
+          animation: fadeUp .4s ease both;
         }
-        .plp-eyebrow { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
-        .dev-badge {
-          font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-          color: #7c3aed; background: #f5f3ff; padding: 2px 8px; border-radius: 999px;
-        }
+        .plp-brand { display: flex; align-items: baseline; gap: 10px; }
         .plp-title {
           font-family: 'DM Serif Display', serif;
-          font-size: 25px; color: #0f0a1e; margin: 0; letter-spacing: -0.4px;
+          font-size: 22px; font-weight: 400;
+          color: var(--ink);
+          margin: 0; letter-spacing: -.3px;
         }
-        .plp-subtitle { font-size: 11px; color: #9ca3af; margin: 2px 0 0; }
+        .plp-subtitle {
+          font-size: 11px; font-weight: 500;
+          color: var(--muted);
+          letter-spacing: .5px;
+          text-transform: uppercase;
+        }
 
-        .role-switcher {
-          display: flex; background: #fff;
-          border: 1px solid #e5e7eb; border-radius: 10px; padding: 3px; gap: 2px;
+        /* ── Role switcher ── */
+        .role-switcher { display: flex; align-items: center; gap: 10px; }
+        .role-label {
+          font-size: 10px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: 1.4px;
+          color: var(--muted);
         }
-        .role-btn {
-          padding: 6px 16px; border: none; border-radius: 8px;
-          font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+        .role-tabs {
+          display: flex;
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          padding: 3px; gap: 2px;
+        }
+        .role-tab {
+          padding: 6px 15px;
+          border: none; border-radius: 9px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 12px; font-weight: 600;
           cursor: pointer; transition: all .18s ease;
-          background: transparent; color: #9ca3af;
+          background: transparent; color: var(--muted);
+          white-space: nowrap;
         }
-        .role-btn.active {
-          background: linear-gradient(135deg, #7f1d1d, #b91c1c 55%, #e11d48);
-          color: #fff; box-shadow: 0 2px 8px rgba(185,28,28,0.25);
+        .role-tab.active {
+          background: linear-gradient(135deg, var(--red-deep), var(--red-mid) 55%, var(--red-bright));
+          color: #fff;
+          box-shadow: 0 2px 10px var(--red-glow);
         }
-        .role-btn:not(.active):hover { color: #374151; background: #f9fafb; }
+        .top-div { width: 1px; height: 32px; background: var(--border); }
 
-        .plp-actions { display: flex; align-items: center; gap: 10px; }
-
+        /* ── Add button ── */
         .add-btn {
-          display: flex; align-items: center; gap: 7px;
-          padding: 9px 20px; border-radius: 12px; border: none;
-          color: #fff; font-size: 13px; font-weight: 700;
-          cursor: pointer; font-family: 'DM Sans', sans-serif;
-          background: linear-gradient(135deg, #7f1d1d, #b91c1c 55%, #e11d48);
-          box-shadow: 0 4px 16px rgba(185,28,28,0.32);
+          display: flex; align-items: center; gap: 8px;
+          padding: 10px 22px;
+          border-radius: 12px; border: none;
+          background: linear-gradient(135deg, var(--red-deep), var(--red-mid) 55%, var(--red-bright));
+          color: #fff;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13px; font-weight: 700;
+          cursor: pointer;
+          box-shadow: 0 4px 18px var(--red-glow), 0 1px 0 rgba(255,255,255,.15) inset;
           transition: transform .15s, box-shadow .15s;
+          letter-spacing: .2px;
         }
-        .add-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(185,28,28,0.40); }
+        .add-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(185,28,28,.35), 0 1px 0 rgba(255,255,255,.15) inset;
+        }
         .add-btn:active { transform: translateY(0); }
+        .add-btn-icon {
+          width: 18px; height: 18px;
+          background: rgba(255,255,255,.22);
+          border-radius: 6px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 14px; line-height: 1; font-weight: 400;
+        }
 
-        /* BODY */
-        .plp-body { padding: 24px 32px; display: flex; flex-direction: column; gap: 22px; }
+        /* ── Body ── */
+        .plp-body { padding: 28px 36px; display: flex; flex-direction: column; gap: 24px; }
 
-        /* STAT CARDS */
-        .stat-grid {
-          display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
-          animation: fadeUp .38s ease both .08s;
+        /* ── Stat row ── */
+        .stat-row {
+          display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px;
+          animation: fadeUp .4s ease both .07s;
         }
         .stat-card {
-          background: #fff; border-radius: 18px; padding: 20px;
-          border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+          border-radius: 20px;
+          padding: 22px 22px 18px;
           position: relative; overflow: hidden;
-          transition: transform .2s, box-shadow .2s;
+          cursor: default;
+          transition: transform .22s cubic-bezier(.34,1.56,.64,1);
         }
-        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.09); }
-        .stat-bar {
-          position: absolute; top: 0; left: 0; right: 0; height: 3px;
-          border-radius: 18px 18px 0 0;
-        }
-        .stat-inner { display: flex; align-items: flex-start; justify-content: space-between; }
-        .stat-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #9ca3af; margin: 0 0 10px; }
-        .stat-value { font-size: 30px; font-weight: 700; margin: 0; letter-spacing: -1px; }
-        .stat-trend { font-size: 11px; color: #d1d5db; margin: 6px 0 0; }
-        .stat-icon  { width: 42px; height: 42px; border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .stat-card:hover { transform: translateY(-4px) scale(1.01); }
+        .stat-card.s-total  { background: #7f1d1d; }
+        .stat-card.s-active { background: #fff; border: 1px solid rgba(0,0,0,.07); box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+        .stat-card.s-value  { background: #fff; border: 1px solid rgba(0,0,0,.07); box-shadow: 0 2px 8px rgba(0,0,0,.04); }
 
-        /* TABLE PANEL */
+        .sc-orb { position:absolute; border-radius:50%; pointer-events:none; z-index:0; }
+        .s-total  .sc-orb-a { width:120px;height:120px;background:rgba(255,255,255,.06);bottom:-40px;right:-28px; }
+        .s-total  .sc-orb-b { width:60px;height:60px;background:rgba(255,255,255,.05);top:-16px;right:60px; }
+        .s-active .sc-orb-a { width:80px;height:80px;background:#dcfce7;bottom:-24px;right:-18px; }
+        .s-value  .sc-orb-a { width:80px;height:80px;background:#dbeafe;bottom:-24px;right:-18px; }
+        .stat-card > *:not(.sc-orb) { position:relative; z-index:1; }
+
+        .stat-top { display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px; }
+        .stat-icon-wrap {
+          width:40px;height:40px;border-radius:12px;
+          display:flex;align-items:center;justify-content:center;flex-shrink:0;
+        }
+        .s-total  .stat-icon-wrap { background:rgba(255,255,255,.15); }
+        .s-active .stat-icon-wrap { background:#dcfce7; }
+        .s-value  .stat-icon-wrap { background:#dbeafe; }
+        .stat-icon-wrap svg { width:18px;height:18px; }
+
+        .stat-badge { font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;letter-spacing:.2px; }
+        .s-total  .stat-badge { background:rgba(255,255,255,.15);color:rgba(255,255,255,.85); }
+        .s-active .stat-badge { background:#dcfce7;color:#15803d; }
+        .s-value  .stat-badge { background:#dbeafe;color:#1d4ed8; }
+
+        .stat-label { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;margin-bottom:4px; }
+        .s-total  .stat-label { color:rgba(255,255,255,.55); }
+        .s-active .stat-label, .s-value .stat-label { color:var(--muted); }
+
+        .stat-value {
+          font-family:'DM Serif Display',serif;
+          font-size:36px;line-height:1;font-weight:400;letter-spacing:-0.5px;
+          margin-bottom:2px;
+          animation: numIn .5s ease both;
+        }
+        .s-total  .stat-value { color:#fff; }
+        .s-active .stat-value, .s-value .stat-value { color:var(--ink); }
+
+        .stat-sub { font-size:11px;font-weight:500;margin-bottom:16px; }
+        .s-total  .stat-sub { color:rgba(255,255,255,.4); }
+        .s-active .stat-sub, .s-value .stat-sub { color:var(--muted); }
+
+        .stat-divider { height:1px;margin-bottom:12px; }
+        .s-total  .stat-divider { background:rgba(255,255,255,.12); }
+        .s-active .stat-divider, .s-value .stat-divider { background:#f3f4f6; }
+
+        .stat-footer { display:flex;align-items:center;justify-content:space-between; }
+        .stat-foot-left { display:flex;align-items:center;gap:6px; }
+        .stat-foot-dot { width:6px;height:6px;border-radius:50%;flex-shrink:0; }
+        .s-total  .stat-foot-dot { background:rgba(255,255,255,.35); }
+        .s-active .stat-foot-dot { background:#4ade80; }
+        .s-value  .stat-foot-dot { background:#60a5fa; }
+        .stat-foot-text { font-size:11px;font-weight:500; }
+        .s-total  .stat-foot-text { color:rgba(255,255,255,.45); }
+        .s-active .stat-foot-text, .s-value .stat-foot-text { color:var(--muted); }
+
+        .stat-bar-track { height:3px;border-radius:99px;margin-top:14px;overflow:hidden; }
+        .s-total  .stat-bar-track { background:rgba(255,255,255,.12); }
+        .s-active .stat-bar-track { background:#f0fdf4; }
+        .s-value  .stat-bar-track { background:#eff6ff; }
+        .stat-bar-fill {
+          height:100%;border-radius:99px;
+          animation:barGrow 1.1s cubic-bezier(.22,1,.36,1) both .35s;
+          transform-origin:left;
+        }
+        .s-total  .stat-bar-fill { background:rgba(255,255,255,.45); }
+        .s-active .stat-bar-fill { background:#4ade80; }
+        .s-value  .stat-bar-fill { background:#60a5fa; }
+
+        /* ── Table panel ── */
         .table-panel {
-          background: #fff; border-radius: 18px;
-          border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-          overflow: hidden; animation: fadeUp .38s ease both .16s;
+          background: var(--surface);
+          border-radius: 20px;
+          border: 1px solid var(--border);
+          overflow: hidden;
+          animation: fadeUp .4s ease both .14s;
+          box-shadow: 0 1px 3px rgba(0,0,0,.04);
         }
         .panel-toolbar {
-          padding: 16px 24px; border-bottom: 1px solid #f3f4f6;
-          display: flex; align-items: center; justify-content: space-between; gap: 16px;
+          padding: 18px 24px;
+          border-bottom: 1px solid #f3f4f6;
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+          flex-wrap: wrap;
         }
-        .panel-title { font-size: 13px; font-weight: 700; color: #0f0a1e; margin: 0; }
-        .panel-sub   { font-size: 11px; color: #9ca3af; margin: 2px 0 0; }
-        .toolbar-right { display: flex; align-items: center; gap: 8px; }
+        .toolbar-left { display: flex; align-items: center; gap: 12px; }
+        .panel-title  { font-size: 14px; font-weight: 700; color: var(--ink-3); }
+        .count-chip {
+          background: var(--red-pale); color: var(--red-mid);
+          border-radius: 20px; padding: 3px 10px;
+          font-size: 11px; font-weight: 700;
+        }
+        .toolbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-        .filter-chip {
-          padding: 5px 13px; border-radius: 20px; font-size: 11px; font-weight: 600;
-          letter-spacing: 0.04em; cursor: pointer; border: 1px solid #e5e7eb;
-          background: transparent; color: #9ca3af; font-family: 'DM Sans', sans-serif;
+        /* ── Search ── */
+        .search-wrap { position: relative; display: flex; align-items: center; }
+        .search-icon { position: absolute; left: 10px; color: var(--muted); font-size: 13px; pointer-events: none; }
+        .search-input {
+          padding: 7px 12px 7px 30px;
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 12px; color: var(--ink-3);
+          outline: none; width: 190px;
+          background: var(--bg);
+          transition: border-color .15s, box-shadow .15s, width .25s;
+        }
+        .search-input:focus {
+          border-color: var(--red-mid);
+          box-shadow: 0 0 0 3px var(--red-glow);
+          width: 230px; background: #fff;
+        }
+        .search-input::placeholder { color: #c4c4cc; }
+
+        /* ── Filter chips ── */
+        .f-chips { display: flex; gap: 6px; }
+        .f-chip {
+          padding: 5px 14px; border-radius: 20px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 11px; font-weight: 600;
+          cursor: pointer; border: 1px solid var(--border);
+          background: transparent; color: var(--muted);
           transition: all .15s;
         }
-        .filter-chip:hover { border-color: #d1d5db; color: #374151; }
-        .filter-chip.f-all      { border-color: #b91c1c; background: #fef2f2; color: #b91c1c; }
-        .filter-chip.f-active   { border-color: #bbf7d0; background: #f0fdf4; color: #16a34a; }
-        .filter-chip.f-inactive { border-color: #fde68a; background: #fffbeb; color: #d97706; }
+        .f-chip:hover { border-color: #d1d5db; color: var(--ink-3); }
+        .f-chip.fc-all    { border-color: var(--red-mid); background: var(--red-pale); color: var(--red-mid); }
+        .f-chip.fc-active { border-color: #bbf7d0; background: var(--green-bg); color: var(--green-text); }
+        .f-chip.fc-inact  { border-color: #fde68a; background: var(--amber-bg); color: var(--amber-text); }
 
-        .search-wrap {
-          display: flex; align-items: center; gap: 8px;
-          padding: 8px 14px; background: #f9fafb;
-          border: 1px solid #e5e7eb; border-radius: 12px; width: 200px;
-          cursor: text; transition: border-color .15s;
-        }
-        .search-wrap:focus-within { border-color: #fca5a5; }
-        .search-input {
-          background: transparent; border: none; outline: none;
-          font-size: 12px; color: #374151; width: 100%; font-family: 'DM Sans', sans-serif;
-        }
-        .search-input::placeholder { color: #9ca3af; }
-
-        /* table */
-        .plp-table { width: 100%; border-collapse: collapse; text-align: left; }
-        .plp-table thead tr { background: linear-gradient(90deg, #fafafa, #f7f8fa); }
+        /* ── Table ── */
+        .plp-table { width: 100%; border-collapse: collapse; }
+        .plp-table thead { background: #fafafa; }
         .plp-table th {
-          padding: 12px 24px; font-size: 10px; font-weight: 700;
-          color: #9ca3af; text-transform: uppercase; letter-spacing: 1.5px;
+          padding: 11px 20px;
+          font-size: 10px; font-weight: 700;
+          color: var(--muted);
+          text-transform: uppercase; letter-spacing: .9px;
+          text-align: left; cursor: pointer; user-select: none;
+          white-space: nowrap; transition: color .15s;
         }
-        .plp-table th.right  { text-align: right; }
-        .plp-table th.center { text-align: center; }
-        .plp-table tbody tr  { border-top: 1px solid #f3f4f6; transition: background .12s; }
-        .plp-table tbody tr:hover td { background: #fafbfc; }
-        .plp-table td { padding: 14px 24px; vertical-align: middle; }
-
-        .prod-code {
-          font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500;
-          letter-spacing: 0.06em; color: #6b7280;
-          background: #f3f4f6; border: 1px solid #e5e7eb;
-          padding: 3px 8px; border-radius: 6px; display: inline-block;
+        .plp-table th:hover { color: var(--ink-3); }
+        .plp-table th.th-noclick { cursor: default; }
+        .plp-table td {
+          padding: 14px 20px;
+          border-top: 1px solid #f3f4f6;
+          font-size: 13px; font-weight: 500;
+          color: var(--ink-3); vertical-align: middle;
         }
-        .desc-text  { font-size: 13px; font-weight: 600; color: #0f0a1e; }
-        .unit-text  { font-family: 'DM Mono', monospace; font-size: 11px; color: #9ca3af; }
+        .plp-table tbody tr { transition: background .12s; }
+        .plp-table tbody tr:hover td { background: #fafafa; }
 
-        .price-cell { text-align: right; }
-        .price-val  { font-size: 14px; font-weight: 700; color: #111827; }
-
-        .status-cell { text-align: center; }
-        .status-badge {
-          display: inline-flex; align-items: center; gap: 6px;
-          padding: 4px 10px; border-radius: 999px;
-          font-size: 11px; font-weight: 700; border: 1px solid;
+        /* ── Cell types ── */
+        .cell-code {
+          font-family: 'DM Mono', monospace;
+          font-size: 11.5px; font-weight: 500;
+          color: var(--violet-text); background: var(--violet-bg);
+          padding: 4px 9px; border-radius: 7px;
+          display: inline-block; letter-spacing: .3px;
         }
-        .status-badge.active   { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
-        .status-badge.inactive { background: #fffbeb; color: #d97706; border-color: #fde68a; }
-        .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; background: currentColor; }
-        .status-badge.active .status-dot { animation: livePulse 2s infinite; }
+        .cell-desc { color: var(--ink-2); font-weight: 600; }
+        .cell-unit {
+          font-size: 11px; font-weight: 600;
+          color: var(--muted); background: #f3f4f6;
+          border-radius: 6px; padding: 3px 8px;
+          display: inline-block; text-transform: uppercase; letter-spacing: .5px;
+        }
+        .cell-price {
+          font-family: 'DM Mono', monospace;
+          font-size: 13px; font-weight: 500; color: var(--blue-text);
+        }
+        .cell-stamp { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
 
-        .stamp-text { font-family: 'DM Mono', monospace; font-size: 11px; color: #9ca3af; font-style: italic; }
+        /* ── Status badge ── */
+        .badge {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 4px 11px; border-radius: 999px;
+          font-size: 11px; font-weight: 700; letter-spacing: .3px;
+        }
+        .badge-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+        .badge.b-active   { background: var(--green-bg); color: var(--green-text); }
+        .badge.b-active .badge-dot { background: var(--green-text); }
+        .badge.b-inactive { background: var(--amber-bg); color: var(--amber-text); }
+        .badge.b-inactive .badge-dot { background: var(--amber-text); }
 
-        .actions-cell { text-align: right; }
-        .action-group { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+        /* ── Action buttons ── */
+        .act-wrap { display: flex; gap: 6px; align-items: center; }
         .act-btn {
-          display: flex; align-items: center; gap: 5px; padding: 6px 12px;
-          font-size: 12px; font-weight: 600; color: #6b7280;
-          background: transparent; border: 1px solid #e5e7eb; border-radius: 8px;
-          cursor: pointer; font-family: 'DM Sans', sans-serif;
-          transition: color .12s, background .12s, border-color .12s;
+          padding: 5px 12px; border-radius: 8px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 11px; font-weight: 700;
+          cursor: pointer; border: 1px solid;
+          transition: all .15s; letter-spacing: .2px;
+          display: flex; align-items: center; gap: 4px;
         }
-        .act-btn.edit:hover   { color: #b91c1c; background: #fef2f2; border-color: #fca5a5; }
-        .act-btn.delete:hover { color: #dc2626; background: #fef2f2; border-color: #fca5a5; }
+        .act-btn.ab-edit { color: var(--blue-text); border-color: #bfdbfe; background: var(--blue-bg); }
+        .act-btn.ab-edit:hover { background: #dbeafe; border-color: #93c5fd; }
+        .act-btn.ab-del  { color: var(--red-mid); border-color: #fecaca; background: var(--red-pale); }
+        .act-btn.ab-del:hover { background: #fee2e2; border-color: #fca5a5; }
 
-        /* empty */
-        .empty-cell  { padding: 72px 24px; text-align: center; }
-        .empty-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-        .empty-icon-wrap {
-          width: 52px; height: 52px; border-radius: 16px;
-          background: linear-gradient(135deg, #fef2f2, #fee2e2);
+        /* ── Empty / Loading ── */
+        .table-state { padding: 60px 24px; text-align: center; color: var(--muted); }
+        .table-state p { margin: 8px 0 0; font-size: 13px; }
+        .loader {
+          width: 28px; height: 28px;
+          border: 3px solid #f3f4f6; border-top-color: var(--red-mid);
+          border-radius: 50%;
+          animation: spin .7s linear infinite;
+          margin: 0 auto 10px;
+        }
+        .empty-icon { font-size: 32px; margin-bottom: 8px; }
+
+        /* ── Toast ── */
+        .toast-wrap {
+          position: fixed; bottom: 28px; right: 28px;
+          z-index: 200; animation: toastIn .25s ease;
+        }
+        .toast {
+          display: flex; align-items: center; gap: 10px;
+          padding: 13px 18px; border-radius: 14px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13px; font-weight: 600;
+          box-shadow: 0 8px 28px rgba(0,0,0,.14);
+          backdrop-filter: blur(8px); min-width: 240px;
+        }
+        .toast.t-success { background: #fff; border: 1px solid #bbf7d0; color: var(--green-text); }
+        .toast.t-error   { background: #fff; border: 1px solid #fecaca; color: #dc2626; }
+        .toast-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .toast.t-success .toast-dot { background: var(--green-text); }
+        .toast.t-error   .toast-dot { background: #dc2626; }
+
+        /* ══════════════════════════════════════
+           MODAL STYLES — shared by all 3 modals
+           ══════════════════════════════════════ */
+
+        /* Overlay backdrop — covers full viewport */
+        .modal-overlay {
+          position: fixed; inset: 0; z-index: 100;
+          background: rgba(0, 0, 0, 0.45);
           display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 4px 16px rgba(185,28,28,0.10);
+          padding: 20px;
+          animation: fadeIn .18s ease;
         }
-        .empty-title { font-size: 14px; font-weight: 700; color: #4b5563; margin: 0; }
-        .empty-sub   { font-size: 12px; color: #9ca3af; margin: 4px 0 0; }
 
-        /* panel footer */
-        .panel-footer {
-          padding: 12px 24px; border-top: 1px solid #f3f4f6;
-          display: flex; align-items: center; justify-content: space-between;
+        /* Modal container */
+        .modal-box {
+          background: #fff;
+          border-radius: 20px;
+          width: 100%; max-width: 460px;
+          box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+          animation: slideIn .22s ease;
+          overflow: hidden;
         }
-        .footer-count { font-size: 11px; color: #9ca3af; margin: 0; }
-        .footer-note  { font-size: 11px; color: #9ca3af; margin: 0; font-style: italic; }
+
+        /* Header section */
+        .modal-header { padding: 26px 26px 0; }
+        .modal-eyebrow {
+          font-size: 10px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: 1.2px;
+          color: var(--red-mid); margin-bottom: 5px;
+        }
+        .modal-title {
+          font-family: 'DM Serif Display', serif;
+          font-size: 23px; font-weight: 400;
+          color: var(--ink); margin: 0 0 6px;
+        }
+        .modal-sub { font-size: 12px; color: var(--muted); line-height: 1.55; margin: 0; }
+
+        /* Form fields */
+        .form-group { padding: 0 26px; margin-top: 18px; }
+        .form-label {
+          display: block;
+          font-size: 10px; font-weight: 700;
+          color: var(--ink-3);
+          text-transform: uppercase; letter-spacing: .5px;
+          margin-bottom: 6px;
+        }
+        .form-input {
+          width: 100%; padding: 10px 13px;
+          border: 1px solid #e5e7eb; border-radius: 10px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13px; color: var(--ink);
+          outline: none; background: #fff;
+          transition: border-color .15s, box-shadow .15s;
+        }
+        .form-input:focus {
+          border-color: var(--red-mid);
+          box-shadow: 0 0 0 3px var(--red-glow);
+        }
+        .form-input:disabled {
+          background: #f9fafb; color: var(--muted); cursor: not-allowed;
+        }
+        .form-hint { font-size: 10px; color: var(--muted); margin-top: 5px; }
+
+        /* Footer with action buttons */
+        .modal-footer {
+          padding: 22px 26px 26px;
+          display: flex; justify-content: flex-end; gap: 10px;
+          margin-top: 20px;
+        }
+        .btn-cancel {
+          padding: 10px 20px; border-radius: 10px;
+          border: 1px solid #e5e7eb; background: #fff;
+          color: var(--ink-3);
+          font-family: 'DM Sans', sans-serif;
+          font-size: 12px; font-weight: 600;
+          cursor: pointer; transition: background .15s;
+        }
+        .btn-cancel:hover { background: #f9fafb; }
+        .btn-primary {
+          padding: 10px 22px; border-radius: 10px; border: none;
+          background: linear-gradient(135deg, var(--red-deep), var(--red-mid) 55%, var(--red-bright));
+          color: #fff;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 12px; font-weight: 700;
+          cursor: pointer;
+          box-shadow: 0 3px 12px var(--red-glow);
+          transition: transform .15s, box-shadow .15s;
+        }
+        .btn-primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 18px rgba(185,28,28,.3);
+        }
+        .btn-danger {
+          padding: 10px 22px; border-radius: 10px; border: none;
+          background: #dc2626; color: #fff;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 12px; font-weight: 700;
+          cursor: pointer;
+          box-shadow: 0 3px 12px rgba(220,38,38,.25);
+          transition: transform .15s, box-shadow .15s;
+        }
+        .btn-danger:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 18px rgba(220,38,38,.35);
+        }
+
+        /* SoftDeleteDialog-specific */
+        .delete-head {
+          display: flex; align-items: center; gap: 14px;
+          padding: 26px 26px 0;
+        }
+        .delete-icon-wrap {
+          width: 46px; height: 46px; border-radius: 13px;
+          background: var(--red-pale);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 20px; flex-shrink: 0;
+        }
+        .delete-detail {
+          margin: 18px 26px 0;
+          border: 1px solid #f3f4f6; border-radius: 12px; overflow: hidden;
+        }
+        .delete-detail-row {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 10px 14px; border-bottom: 1px solid #f9fafb;
+        }
+        .delete-detail-row:last-child { border-bottom: none; }
+        .detail-key {
+          font-size: 10px; font-weight: 700;
+          color: var(--muted); text-transform: uppercase; letter-spacing: .4px;
+        }
+        .detail-val {
+          font-family: 'DM Mono', monospace;
+          font-size: 11px; color: var(--ink-2);
+        }
+        .delete-warn {
+          margin: 14px 26px 0;
+          background: var(--amber-bg);
+          border: 1px solid #fde68a; border-radius: 10px;
+          padding: 10px 14px;
+          font-size: 11px; color: var(--amber-text); line-height: 1.5;
+          display: flex; gap: 8px; align-items: flex-start;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 768px) {
+          .plp-topbar { padding: 14px 20px; flex-wrap: wrap; height: auto; gap: 12px; }
+          .plp-body   { padding: 20px; }
+          .stat-row   { grid-template-columns: 1fr; }
+          .role-tabs  { flex-wrap: wrap; }
+          .panel-toolbar { flex-direction: column; align-items: flex-start; }
+          .modal-box  { max-width: 100%; }
+        }
       `}</style>
 
-      <div className="plp-bg">
+      <div className="plp-root">
 
-        {/* TOP BAR */}
+        {/* ══ TOPBAR ══ */}
         <div className="plp-topbar">
-          <div>
-            <div className="plp-eyebrow">
-              <span className="dev-badge">Dev Tools</span>
-              <span style={{ fontSize: 11, color: '#9ca3af' }}>Role visibility tester</span>
+          <div className="plp-brand">
+            <div>
+              <h1 className="plp-title">
+                Product Masterlist
+                <span style={{display:'inline-block',width:6,height:6,borderRadius:'50%',background:'#e11d48',marginLeft:5,marginBottom:2,verticalAlign:'middle'}} />
+              </h1>
+              <div className="plp-subtitle">Inventory Management System</div>
             </div>
-            <h1 className="plp-title">Product Masterlist</h1>
-            <p className="plp-subtitle">Manage your product catalog, pricing, and inventory statuses.</p>
           </div>
 
-          <div className="plp-actions">
+          <div style={{display:'flex',alignItems:'center',gap:14}}>
             <div className="role-switcher">
-              <button className={`role-btn ${currentUserRole === 'USER' ? 'active' : ''}`} onClick={() => setCurrentUserRole('USER')}>
-                Standard User
-              </button>
-              <button className={`role-btn ${currentUserRole === 'ADMIN' ? 'active' : ''}`} onClick={() => setCurrentUserRole('ADMIN')}>
-                Admin
-              </button>
+              <span className="role-label">Role</span>
+              <div className="role-tabs">
+                {['USER','ADMIN','SUPERADMIN'].map(r => (
+                  <button
+                    key={r}
+                    className={`role-tab ${currentUserRole === r ? 'active' : ''}`}
+                    onClick={() => setCurrentUserRole(r)}
+                  >
+                    {r === 'USER' ? 'Standard User' : r === 'ADMIN' ? 'Admin' : 'Super Admin'}
+                  </button>
+                ))}
+              </div>
             </div>
-            {isAdmin && (
-              <button className="add-btn">
-                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.8">
-                  <path d="M12 5v14M5 12h14"/>
-                </svg>
+
+            <div className="top-div" />
+
+            {perms.PRD_ADD === 1 && (
+              <button
+                className="add-btn"
+                onClick={() => {
+                  // FIX: reset includes current_price
+                  setFormData({ prodcode: '', description: '', unit: '', current_price: '' });
+                  setIsAddOpen(true);
+                }}
+              >
+                <div className="add-btn-icon">+</div>
                 Add Product
               </button>
             )}
           </div>
         </div>
 
-        {/* BODY */}
+        {/* ══ BODY ══ */}
         <div className="plp-body">
 
-          {/* Stat cards */}
-          <div className="stat-grid">
-            {[
-              { label: 'Total Items',   value: totalCount,  trend: 'In this catalog',     accent: '#2563eb', bg: '#eff6ff',
-                icon: <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg> },
-              { label: 'Active Items',  value: activeCount, trend: 'Visible to all users', accent: '#16a34a', bg: '#f0fdf4',
-                icon: <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg> },
-              { label: 'Catalog Value', value: `$${Number(totalValue).toLocaleString()}`, trend: 'Combined price total', accent: '#b91c1c', bg: '#fef2f2',
-                icon: <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> },
-            ].map((s, i) => (
-              <div key={i} className="stat-card">
-                <div className="stat-bar" style={{ background: `linear-gradient(90deg,${s.accent},transparent)` }} />
-                <div className="stat-inner">
-                  <div>
-                    <p className="stat-label">{s.label}</p>
-                    <p className="stat-value" style={{ color: s.accent }}>{s.value}</p>
-                    <p className="stat-trend">{s.trend}</p>
-                  </div>
-                  <div className="stat-icon" style={{ background: s.bg, color: s.accent }}>{s.icon}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* Stat row */}
+          <div className="stat-row">
 
-          {/* Table panel */}
-          <div className="table-panel">
-            <div className="panel-toolbar">
-              <div>
-                <p className="panel-title">Product Listings</p>
-                <p className="panel-sub">{visibleProducts.length} item{visibleProducts.length !== 1 ? 's' : ''} shown</p>
-              </div>
-              <div className="toolbar-right">
-                <button className={`filter-chip ${filter === 'ALL'      ? 'f-all'      : ''}`} onClick={() => setFilter('ALL')}>All</button>
-                <button className={`filter-chip ${filter === 'ACTIVE'   ? 'f-active'   : ''}`} onClick={() => setFilter('ACTIVE')}>Active</button>
-                {isAdmin && (
-                  <button className={`filter-chip ${filter === 'INACTIVE' ? 'f-inactive' : ''}`} onClick={() => setFilter('INACTIVE')}>Inactive</button>
-                )}
-                <label className="search-wrap">
-                  <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="#9ca3af" strokeWidth="2.5" style={{ flexShrink: 0 }}>
-                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            <div className="stat-card s-total">
+              <div className="sc-orb sc-orb-a" />
+              <div className="sc-orb sc-orb-b" />
+              <div className="stat-top">
+                <div className="stat-icon-wrap">
+                  <svg viewBox="0 0 18 18" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 5l7-3 7 3v8l-7 3-7-3V5z"/><path d="M9 2v14M2 5l7 3 7-3"/>
                   </svg>
-                  <input
-                    type="text" placeholder="Search products…"
-                    className="search-input"
-                    value={search} onChange={e => setSearch(e.target.value)}
-                  />
-                </label>
+                </div>
+                <span className="stat-badge">Catalog</span>
+              </div>
+              <div className="stat-label">Total Items</div>
+              <div className="stat-value">{totalCount}</div>
+              <div className="stat-sub">{isAdmin ? 'Active + inactive records' : 'Active records only'}</div>
+              <div className="stat-divider" />
+              <div className="stat-footer">
+                <div className="stat-foot-left">
+                  <div className="stat-foot-dot" />
+                  <span className="stat-foot-text">{activeCount} active now</span>
+                </div>
+                <span className="stat-badge">↑ 12 this mo.</span>
+              </div>
+              <div className="stat-bar-track">
+                <div className="stat-bar-fill" style={{width: totalCount > 0 ? `${Math.round((activeCount/totalCount)*100)}%` : '0%'}} />
               </div>
             </div>
 
-            <table className="plp-table">
-              <thead>
-                <tr>
-                  <th>Prod Code</th>
-                  <th>Description</th>
-                  <th>Unit</th>
-                  <th className="right">Price</th>
-                  <th className="center">Status</th>
-                  {isAdmin && <th>Stamp</th>}
-                  <th className="right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleProducts.length > 0 ? visibleProducts.map((p) => (
-                  <tr key={p.id}>
-                    <td><span className="prod-code">{p.prodCode}</span></td>
-                    <td><span className="desc-text">{p.description}</span></td>
-                    <td><span className="unit-text">{p.unit}</span></td>
-                    <td className="price-cell"><span className="price-val">${p.currentPrice.toFixed(2)}</span></td>
-                    <td className="status-cell">
-                      <span className={`status-badge ${p.status === 'ACTIVE' ? 'active' : 'inactive'}`}>
-                        <span className="status-dot" />{p.status}
-                      </span>
-                    </td>
-                    {isAdmin && <td><span className="stamp-text">{p.stamp}</span></td>}
-                    <td className="actions-cell">
-                      <div className="action-group">
-                        <button className="act-btn edit">
-                          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                          </svg>
-                          Edit
-                        </button>
-                        <button className="act-btn delete">
-                          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                            <polyline points="3 6 5 6 21 6"/>
-                            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-                            <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
-                          </svg>
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={isAdmin ? 7 : 6} className="empty-cell">
-                      <div className="empty-inner">
-                        <div className="empty-icon-wrap">
-                          <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="#b91c1c" strokeWidth="1.6">
-                            <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/>
-                            <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="empty-title">No products found</p>
-                          <p className="empty-sub">Try adjusting your filters or search query.</p>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-
-            {visibleProducts.length > 0 && (
-              <div className="panel-footer">
-                <p className="footer-count">Showing {visibleProducts.length} of {totalCount} products</p>
-                <p className="footer-note">{isAdmin ? 'Admin view — all records visible' : 'Standard view — active items only'}</p>
+            <div className="stat-card s-active">
+              <div className="sc-orb sc-orb-a" />
+              <div className="stat-top">
+                <div className="stat-icon-wrap">
+                  <svg viewBox="0 0 18 18" fill="none" stroke="#15803d" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="9" cy="9" r="7"/><path d="M6 9l2 2 4-4"/>
+                  </svg>
+                </div>
+                <span className="stat-badge">Live</span>
               </div>
-            )}
+              <div className="stat-label">Active Items</div>
+              <div className="stat-value">{activeCount}</div>
+              <div className="stat-sub">In circulation</div>
+              <div className="stat-divider" />
+              <div className="stat-footer">
+                <div className="stat-foot-left">
+                  <div className="stat-foot-dot" />
+                  <span className="stat-foot-text">{totalCount > 0 ? Math.round((activeCount/totalCount)*100) : 0}% of catalog</span>
+                </div>
+                <span className="stat-badge">↑ 8 this mo.</span>
+              </div>
+              <div className="stat-bar-track">
+                <div className="stat-bar-fill" style={{width: totalCount > 0 ? `${Math.round((activeCount/totalCount)*100)}%` : '0%'}} />
+              </div>
+            </div>
+
+            <div className="stat-card s-value">
+              <div className="sc-orb sc-orb-a" />
+              <div className="stat-top">
+                <div className="stat-icon-wrap">
+                  <svg viewBox="0 0 18 18" fill="none" stroke="#1d4ed8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="9" cy="9" r="7"/><path d="M9 5v1.5M9 11.5V13M6.5 7.5C6.5 6.67 7.17 6 8 6h2a1.5 1.5 0 010 3H8a1.5 1.5 0 000 3h2c.83 0 1.5-.67 1.5-1.5"/>
+                  </svg>
+                </div>
+                <span className="stat-badge">Pricing</span>
+              </div>
+              <div className="stat-label">Catalog Value</div>
+              <div className="stat-value">₱{totalValue.toLocaleString()}</div>
+              <div className="stat-sub">Sum of all prices</div>
+              <div className="stat-divider" />
+              <div className="stat-footer">
+                <div className="stat-foot-left">
+                  <div className="stat-foot-dot" />
+                  <span className="stat-foot-text">Avg ₱{activeCount > 0 ? Math.round(totalValue/activeCount).toLocaleString() : 0} / item</span>
+                </div>
+                <span className="stat-badge">↑ ₱3.2k this mo.</span>
+              </div>
+              <div className="stat-bar-track">
+                <div className="stat-bar-fill" style={{width:'57%'}} />
+              </div>
+            </div>
+
           </div>
 
+          {/* Table */}
+          <div className="table-panel">
+            <div className="panel-toolbar">
+              <div className="toolbar-left">
+                <span className="panel-title">Product Listings</span>
+                <span className="count-chip">{visibleProducts.length} shown</span>
+              </div>
+              <div className="toolbar-right">
+                <div className="search-wrap">
+                  <span className="search-icon">⌕</span>
+                  <input
+                    className="search-input"
+                    placeholder="Search by code or name…"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                  />
+                </div>
+                <div className="f-chips">
+                  <button className={`f-chip ${filter==='ALL'      ? 'fc-all'   : ''}`} onClick={()=>setFilter('ALL')}>All</button>
+                  <button className={`f-chip ${filter==='ACTIVE'   ? 'fc-active': ''}`} onClick={()=>setFilter('ACTIVE')}>Active</button>
+                  {isAdmin && (
+                    <button className={`f-chip ${filter==='INACTIVE' ? 'fc-inact' : ''}`} onClick={()=>setFilter('INACTIVE')}>Inactive</button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {isLoading ? (
+              <div className="table-state">
+                <div className="loader" />
+                <p>Loading products…</p>
+              </div>
+            ) : (
+              <table className="plp-table">
+                <thead>
+                  <tr>
+                    <th onClick={() => handleSort('prodcode')}>Code <SortIcon col="prodcode" /></th>
+                    <th onClick={() => handleSort('description')}>Description <SortIcon col="description" /></th>
+                    <th className="th-noclick">Unit</th>
+                    <th onClick={() => handleSort('current_price')}>Price <SortIcon col="current_price" /></th>
+                    <th onClick={() => handleSort('record_status')}>Status <SortIcon col="record_status" /></th>
+                    {isAdmin && <th onClick={() => handleSort('updated_at')}>Last Updated <SortIcon col="updated_at" /></th>}
+                    <th className="th-noclick">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={isAdmin ? 7 : 6}>
+                        <div className="table-state">
+                          <div className="empty-icon">🔍</div>
+                          <p>No products found matching your criteria.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    visibleProducts.map(p => (
+                      <tr key={p.prodcode}>
+                        <td><span className="cell-code">{p.prodcode}</span></td>
+                        <td><span className="cell-desc">{p.description}</span></td>
+                        <td><span className="cell-unit">{p.unit}</span></td>
+                        <td><span className="cell-price">₱{(Number(p.current_price)||0).toLocaleString()}</span></td>
+                        <td>
+                          <span className={`badge ${p.record_status==='ACTIVE' ? 'b-active' : 'b-inactive'}`}>
+                            <span className="badge-dot" />
+                            {p.record_status}
+                          </span>
+                        </td>
+                        {isAdmin && (
+                          <td><span className="cell-stamp">{p.updated_at || '—'}</span></td>
+                        )}
+                        <td>
+                          <div className="act-wrap">
+                            {perms.PRD_EDIT === 1 && (
+                              <button className="act-btn ab-edit" onClick={() => openEditModal(p)}>
+                                ✎ Edit
+                              </button>
+                            )}
+                            {perms.PRD_DEL === 1 && (
+                              <button className="act-btn ab-del" onClick={() => openDeleteModal(p)}>
+                                ⊘ Delete
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* ══ MODAL: ADD ══ */}
+      <AddProductModal
+        isOpen={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        formData={formData}
+        setFormData={setFormData}
+        onSubmit={handleAddSubmit}
+      />
+
+      {/* ══ MODAL: EDIT ══ */}
+      <EditProductModal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        formData={formData}
+        setFormData={setFormData}
+        selectedProduct={selectedProduct}
+        onSubmit={handleEditSubmit}
+      />
+
+      {/* ══ MODAL: DELETE ══ */}
+      <SoftDeleteDialog
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        selectedProduct={selectedProduct}
+        onSubmit={handleDeleteSubmit}
+      />
+
+      {/* ══ TOAST ══ */}
+      {toast && (
+        <div className="toast-wrap">
+          <div className={`toast t-${toast.type}`}>
+            <span className="toast-dot" />
+            {toast.msg}
+          </div>
+        </div>
+      )}
     </>
   );
 };
