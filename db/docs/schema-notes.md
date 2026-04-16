@@ -25,7 +25,6 @@ This ERD represents the database schema for a system covering HR management, sal
 
 ### 🔐 User Access Control Module
 * **`user`** — Stores system user accounts with type and status, linked to Supabase `auth.users`.
-* **`products`** — Application-level product records owned by a user.
 * **`module`** — Defines system modules available in the application.
 * **`rights`** — Defines access rights/permissions.
 * **`usermodule_rights`** — Junction table that assigns specific module rights to users.
