@@ -6,11 +6,9 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [session, setSession] = useState(null);
-  const [permissions, setPermissions] = useState([]); // Prepared for future Role-Based Access
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Async function to handle the Login Guard check
     const handleSessionGuard = async (currentSession) => {
       if (!currentSession) {
         setSession(null);
@@ -20,48 +18,48 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        // Query the 'user' table (singular) to check the record_status
+        // Updated to use 'user_type' based on your SQL schema
         const { data, error } = await supabase
           .from('user')
-          .select('record_status')
+          .select('user_type, record_status')
           .eq('id', currentSession.user.id)
-          .single();
+          .maybeSingle();
 
-        // If there's an error (like the user row doesn't exist yet), block access
         if (error) throw error;
 
-        // 2. The Login Guard: Check if the user is INACTIVE
+        // Security check: Block users explicitly set to INACTIVE
         if (data?.record_status === 'INACTIVE') {
-          // Sign them out of Supabase Auth immediately
           await supabase.auth.signOut();
-          
-          // Show a professional message regarding the approval process
-          alert("Welcome! Your account has been created. For security, an administrator must approve your access before you can enter the dashboard.");
-          
-          // Redirect back to login so they don't stay stuck on the loading screen
-          window.location.href = "/login";
-          return; 
+          alert("Your account is pending administrator approval.");
+          window.location.replace("/login");
+          return;
         }
 
-        // 3. If ACTIVE, allow them into the session
+        setSession(currentSession);
+        
+        // Map the database 'user_type' to the 'role' property
+        // This ensures DeletedItemsPage recognizes ADMIN/SUPERADMIN roles
+        setCurrentUser({
+          ...currentSession.user,
+          role: data?.user_type || 'USER' 
+        });
+
+      } catch (err) {
+        console.error("Auth Guard Error:", err);
+        // Fallback to basic session info on network error to prevent lockouts
         setSession(currentSession);
         setCurrentUser(currentSession.user);
-      } catch (err) {
-        console.error("Error during login guard check:", err);
-        // If there's a database error, play it safe and sign them out
-        await supabase.auth.signOut();
-        window.location.href = "/login";
       } finally {
         setLoading(false);
       }
     };
 
-    // Initial session check on mount
+    // Initialize session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleSessionGuard(session);
     });
 
-    // Listen for Auth changes (Sign In / Sign Out)
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
         handleSessionGuard(session);
@@ -75,16 +73,8 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const value = { 
-    currentUser, 
-    session, 
-    permissions, 
-    setPermissions, 
-    loading 
-  };
-
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ currentUser, session, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );
