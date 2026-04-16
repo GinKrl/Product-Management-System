@@ -1,5 +1,3 @@
-// Fix: Updated path to match standard project structure where supabaseClient is in src/
-// Change line 2 of priceHistService.js to this:
 import { supabase } from '/src/lib/supabaseClient';
 
 /**
@@ -9,10 +7,10 @@ import { supabase } from '/src/lib/supabaseClient';
 export const getPriceHistory = async (prodcode) => {
   try {
     const { data, error } = await supabase
-      .from('price_history') // Ensure this matches your actual table name (usually snake_case)
+      .from('pricehist') // FIXED: Matches SQL table name
       .select('*')
       .eq('prodcode', prodcode)
-      .order('effDate', { ascending: false }); // Sorting by effective date as per UI requirement
+      .order('effdate', { ascending: false }); // FIXED: Matches SQL column name
 
     if (error) throw error;
     return data;
@@ -28,13 +26,12 @@ export const getPriceHistory = async (prodcode) => {
  */
 export const addPriceEntry = async (priceData) => {
   try {
-    // Ensure the keys in priceData (effDate, unitPrice) match your DB columns
     const { data, error } = await supabase
-      .from('price_history')
+      .from('pricehist') // FIXED: Matches SQL table name
       .insert([{
         prodcode: priceData.prodcode,
-        effDate: priceData.effDate,
-        unitPrice: parseFloat(priceData.unitPrice)
+        effdate: priceData.effDate,     // Maps UI state (effDate) to DB column (effdate)
+        unitprice: parseFloat(priceData.unitPrice) // Maps UI state (unitPrice) to DB column (unitprice)
       }])
       .select();
 
