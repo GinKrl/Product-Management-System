@@ -46,7 +46,7 @@ const NAV_ITEMS = [
       {
         label: 'Deleted Items',
         href: '/deleted-items',
-        roles: ['ADMIN', 'SUPERADMIN'], // Standardized to match DB/AuthContext typical caps
+        roles: ['ADMIN', 'SUPERADMIN'],
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <polyline points="3 6 5 6 21 6" />
@@ -132,7 +132,7 @@ const AppShell = ({ children }) => {
   const userInitials = userEmail.substring(0, 2).toUpperCase();
   
   // FIX: Dynamic role from AuthContext instead of hardcoded 'admin'
-  const userRole = currentUser?.role || 'USER'; 
+  const userRole = currentUser?.role?.toUpperCase() || 'USER';
 
   const SIDEBAR_W = 232;
   const COLLAPSED_W = 64;
@@ -181,7 +181,6 @@ const AppShell = ({ children }) => {
         }
         .sidebar-scroll::-webkit-scrollbar { width: 4px; }
         .sidebar-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
-
         .nav-item.active-deleted { background: linear-gradient(90deg,#fffbeb,#fef3c7) !important; color: #b45309 !important; border-left: 3px solid #f59e0b !important; }
         .nav-item.active-deleted svg { color: #b45309; }
       `}</style>
@@ -230,10 +229,7 @@ const AppShell = ({ children }) => {
 
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
-              // Section visibility check
               if (!canSee(section.roles, userRole)) return null;
-              
-              // Filter items within section
               const visibleItems = section.items.filter(item => canSee(item.roles, userRole));
               if (visibleItems.length === 0) return null;
 
