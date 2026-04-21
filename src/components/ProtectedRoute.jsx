@@ -1,26 +1,38 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const ProtectedRoute = ({ children }) => {
-  const { session, loading } = useAuth();
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { session, currentUser, loading } = useAuth();
 
-  // Show a clean loading state while checking the Supabase session
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-white font-dm-sans">
-        <div className="text-[#b91c1c] font-semibold animate-pulse">
+      <div style={{
+        display: 'flex', height: '100vh',
+        alignItems: 'center', justifyContent: 'center',
+        background: '#fff', fontFamily: "'DM Sans', sans-serif",
+      }}>
+        <div style={{ color: '#b91c1c', fontWeight: 600, fontSize: 14 }}>
           Checking security...
         </div>
       </div>
     );
   }
 
-  // If no user is found, redirect to login
+  // No session → redirect to login
   if (!session) {
     return <Navigate to="/login" replace />;
   }
 
-  // If authenticated, allow access to the Dashboard
+  // Role check — if allowedRoles is provided, enforce it
+  if (allowedRoles && allowedRoles.length > 0) {
+    // FIX: Changed from role to user_type
+    const userRole = currentUser?.user_type?.toUpperCase();
+    const hasAccess = allowedRoles.some(r => r.toUpperCase() === userRole);
+    if (!hasAccess) {
+      return <Navigate to="/products" replace />;
+    }
+  }
+
   return children;
 };
 
