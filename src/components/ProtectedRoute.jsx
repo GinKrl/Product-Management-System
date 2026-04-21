@@ -25,7 +25,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   // Role check — if allowedRoles is provided, enforce it
   if (allowedRoles && allowedRoles.length > 0) {
-    const userRole = currentUser?.role?.toUpperCase();
+    // FIX: Changed from role to user_type
+    const userRole = currentUser?.user_type?.toUpperCase();
     const hasAccess = allowedRoles.some(r => r.toUpperCase() === userRole);
     if (!hasAccess) {
       return <Navigate to="/products" replace />;
