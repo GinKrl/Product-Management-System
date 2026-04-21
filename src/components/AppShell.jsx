@@ -3,27 +3,15 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 
-
 // ── AppShell ──────────────────────────────────────────────────
-
 
 const NAV_ITEMS = [
   {
     section: 'Main',
     items: [
       {
-        label: 'Overview',
-        href: '/dashboard',
-        icon: (
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
-            <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
-            <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
-          </svg>
-        ),
-      },
-      {
         label: 'Products',
-        href: '#',
+        href: '/products',
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" />
@@ -54,6 +42,21 @@ const NAV_ITEMS = [
           </svg>
         ),
       },
+      // PR-04: Deleted Items — restricted access
+      {
+        label: 'Deleted Items',
+        href: '/deleted-items',
+        roles: ['ADMIN', 'SUPERADMIN'], // Standardized to match DB/AuthContext typical caps
+        icon: (
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M8 6V4h8v2" />
+            <path d="M19 6l-1 14H6L5 6" />
+            <line x1="10" y1="11" x2="10" y2="17" />
+            <line x1="14" y1="11" x2="14" y2="17" />
+          </svg>
+        ),
+      },
     ],
   },
   {
@@ -71,7 +74,7 @@ const NAV_ITEMS = [
       {
         label: 'Insights',
         href: '#',
-        roles: ['admin', 'manager'],
+        roles: ['ADMIN', 'MANAGER'],
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <circle cx="12" cy="12" r="9" /><path d="M12 8v4l3 3" />
@@ -82,12 +85,12 @@ const NAV_ITEMS = [
   },
   {
     section: 'Settings',
-    roles: ['admin'],
+    roles: ['ADMIN'],
     items: [
       {
         label: 'Team',
         href: '#',
-        roles: ['admin'],
+        roles: ['ADMIN'],
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
@@ -97,7 +100,7 @@ const NAV_ITEMS = [
       {
         label: 'Preferences',
         href: '#',
-        roles: ['admin'],
+        roles: ['ADMIN'],
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <circle cx="12" cy="12" r="3" />
@@ -109,36 +112,37 @@ const NAV_ITEMS = [
   },
 ];
 
-
-const canSee = (roles, userRole) => !roles || roles.includes(userRole);
-
+// Helper: Improved to handle case-insensitivity
+const canSee = (allowedRoles, userRole) => {
+  if (!allowedRoles) return true;
+  if (!userRole) return false;
+  return allowedRoles.some(role => role.toUpperCase() === userRole.toUpperCase());
+};
 
 const AppShell = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
- 
+  
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser } = useAuth();
 
-
   const userEmail = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
-  const userRole = 'admin';
-
+  
+  // FIX: Dynamic role from AuthContext instead of hardcoded 'admin'
+  const userRole = currentUser?.role || 'USER'; 
 
   const SIDEBAR_W = 232;
   const COLLAPSED_W = 64;
   const NAVBAR_H = 56;
   const effectiveW = sidebarOpen ? SIDEBAR_W : COLLAPSED_W;
 
-
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
   };
-
 
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
@@ -147,7 +151,6 @@ const AppShell = ({ children }) => {
       setSidebarOpen(s => !s);
     }
   };
-
 
   return (
     <>
@@ -175,13 +178,13 @@ const AppShell = ({ children }) => {
           .shell-sidebar { position: fixed !important; top: 0 !important; left: 0 !important; height: 100% !important; z-index: 40 !important; transform: translateX(-100%); transition: transform 0.24s cubic-bezier(.4,0,.2,1), width 0s !important; width: ${SIDEBAR_W}px !important; }
           .shell-sidebar.mobile-open { transform: translateX(0); }
           .shell-main { margin-left: 0 !important; }
-          .search-bar { display: none !important; }
-          .user-name-display { display: none !important; }
         }
         .sidebar-scroll::-webkit-scrollbar { width: 4px; }
         .sidebar-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
-      `}</style>
 
+        .nav-item.active-deleted { background: linear-gradient(90deg,#fffbeb,#fef3c7) !important; color: #b45309 !important; border-left: 3px solid #f59e0b !important; }
+        .nav-item.active-deleted svg { color: #b45309; }
+      `}</style>
 
       <div
         style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'DM Sans',sans-serif" }}
@@ -189,8 +192,6 @@ const AppShell = ({ children }) => {
       >
         {mobileOpen && <div className="mobile-overlay" onClick={() => setMobileOpen(false)} />}
 
-
-        {/* Sidebar */}
         <aside
           className={`shell-sidebar sidebar-scroll ${mobileOpen ? 'mobile-open' : ''}`}
           style={{
@@ -203,7 +204,6 @@ const AppShell = ({ children }) => {
             boxShadow: '2px 0 16px rgba(0,0,0,0.04)',
           }}
         >
-          {/* Brand */}
           <div style={{
             height: NAVBAR_H, display: 'flex', alignItems: 'center', gap: 10,
             padding: sidebarOpen ? '0 18px' : '0',
@@ -228,13 +228,14 @@ const AppShell = ({ children }) => {
             )}
           </div>
 
-
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
+              // Section visibility check
               if (!canSee(section.roles, userRole)) return null;
+              
+              // Filter items within section
               const visibleItems = section.items.filter(item => canSee(item.roles, userRole));
               if (visibleItems.length === 0) return null;
-
 
               return (
                 <div key={section.section} style={{ marginBottom: 4 }}>
@@ -245,19 +246,24 @@ const AppShell = ({ children }) => {
                   )}
                   {visibleItems.map((item) => {
                     const isActive = location.pathname === item.href;
+                    const isDeletedItems = item.href === '/deleted-items';
                     return (
                       <a
                         key={item.label}
                         href={item.href}
                         onClick={(e) => { e.preventDefault(); navigate(item.href); }}
-                        className={`nav-item${isActive ? ' active' : ''}`}
+                        className={`nav-item${isActive ? (isDeletedItems ? ' active-deleted' : ' active') : ''}`}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 10,
                           padding: sidebarOpen ? '9px 18px' : '10px 0',
                           justifyContent: sidebarOpen ? 'flex-start' : 'center',
                           fontSize: 13, fontWeight: isActive ? 700 : 500,
-                          color: isActive ? '#b91c1c' : '#4b5563',
-                          borderLeft: isActive ? '3px solid #b91c1c' : '3px solid transparent',
+                          color: isActive
+                            ? (isDeletedItems ? '#b45309' : '#b91c1c')
+                            : '#4b5563',
+                          borderLeft: isActive
+                            ? `3px solid ${isDeletedItems ? '#f59e0b' : '#b91c1c'}`
+                            : '3px solid transparent',
                           borderRadius: '0 8px 8px 0',
                           margin: '1px 10px 1px 0',
                         }}
@@ -272,15 +278,13 @@ const AppShell = ({ children }) => {
             })}
           </nav>
 
-
-          {/* User Footer */}
           <div style={{ padding: sidebarOpen ? '12px 14px' : '12px 8px', borderTop: '1px solid rgba(0,0,0,0.06)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 12, background: '#f9fafb', border: '1px solid #f3f4f6', justifyContent: sidebarOpen ? 'flex-start' : 'center' }}>
               <div style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, background: 'linear-gradient(135deg,#fef2f2,#fca5a5)', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>{userInitials}</div>
               {sidebarOpen && (
                 <div style={{ overflow: 'hidden', minWidth: 0, flex: 1 }}>
                   <p style={{ fontSize: 12, fontWeight: 700, color: '#0f0a1e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail.split('@')[0]}</p>
-                  <p style={{ fontSize: 10, color: '#9ca3af', textTransform: 'capitalize' }}>{userRole}</p>
+                  <p style={{ fontSize: 10, color: '#9ca3af', textTransform: 'uppercase' }}>{userRole}</p>
                 </div>
               )}
             </div>
@@ -291,11 +295,7 @@ const AppShell = ({ children }) => {
           </div>
         </aside>
 
-
-        {/* Main Area */}
         <div className="shell-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-         
-          {/* Fixed Navbar */}
           <header style={{
             position: 'absolute', top: 0, left: 0, right: 0,
             height: NAVBAR_H, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
@@ -307,10 +307,11 @@ const AppShell = ({ children }) => {
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
               <span style={{ fontSize: 11, color: '#d1d5db' }}>HOPE, INC.</span><span style={{ fontSize: 11, color: '#e5e7eb' }}>/</span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>Overview</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>
+                {location.pathname === '/deleted-items' ? 'Deleted Items' : 'Products'}
+              </span>
             </div>
-           
-            {/* User Menu */}
+            
             <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
               <button onClick={() => setUserMenuOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px 5px 6px', borderRadius: 10, border: `1px solid ${userMenuOpen ? '#fca5a5' : '#e5e7eb'}`, background: userMenuOpen ? '#fef2f2' : '#fff', cursor: 'pointer' }}>
                 <div style={{ width: 26, height: 26, borderRadius: 8, background: 'linear-gradient(135deg,#fef2f2,#fca5a5)', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>{userInitials}</div>
@@ -325,7 +326,6 @@ const AppShell = ({ children }) => {
             </div>
           </header>
 
-          {/* Corrected Content Container */}
           <main style={{
             flex: 1,
             overflowY: 'auto',
@@ -341,6 +341,5 @@ const AppShell = ({ children }) => {
     </>
   );
 };
-
 
 export default AppShell;

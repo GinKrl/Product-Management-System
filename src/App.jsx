@@ -1,11 +1,12 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Login          from './pages/Login';
-import Register       from './pages/Register';
-import Dashboard      from './pages/Dashboard';
-import AppShell       from './components/AppShell';
-import ProtectedRoute from './components/ProtectedRoute';
-import AuthCallback   from './pages/AuthCallback';
+import Login           from './pages/Login';
+import Register        from './pages/Register';
+import AppShell        from './components/AppShell';
+import ProtectedRoute  from './components/ProtectedRoute';
+import AuthCallback    from './pages/AuthCallback';
+import ProductListPage from './pages/ProductListPage';
+import DeletedItemsPage from './pages/DeletedItemsPage'; // PR-04
 
 function App() {
   return (
@@ -18,20 +19,33 @@ function App() {
         {/* ── Auth callback for Google OAuth ── */}
         <Route path="/auth/callback" element={<AuthCallback />} />
 
-        {/* ── Protected routes wrapped in AppShell ── */}
+        {/* ── Product Masterlist ── */}
         <Route
-          path="/dashboard"
+          path="/products"
           element={
             <ProtectedRoute>
               <AppShell>
-                <Dashboard />
+                <ProductListPage />
               </AppShell>
             </ProtectedRoute>
           }
         />
 
-        {/* Redirect "/" to "/login" */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* ── PR-04: Deleted Items — ADMIN / SUPERADMIN only ── */}
+        <Route
+          path="/deleted-items"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}>
+              <AppShell>
+                <DeletedItemsPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ── Redirects ── */}
+        <Route path="/dashboard" element={<Navigate to="/products" replace />} />
+        <Route path="/"          element={<Navigate to="/products" replace />} />
       </Routes>
     </BrowserRouter>
   );
