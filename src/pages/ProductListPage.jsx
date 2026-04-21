@@ -16,20 +16,22 @@ import { useAuth }        from '../contexts/AuthContext';
 const ProductListPage = () => {
   const { currentUser } = useAuth();
   const { rights }      = useRights();
-  const currentUserRole = currentUser?.role || 'USER';
+  
+  // FIX: Ensure this matches the 'user_type' column in your Supabase 'users' table
+  const currentUserRole = currentUser?.user_type?.toUpperCase() || 'USER';
 
-  const [products, setProducts]             = useState([]);
-  const [isLoading, setIsLoading]           = useState(true);
-  const [search, setSearch]                 = useState('');
-  const [filter, setFilter]                 = useState('ALL');
-  const [isAddOpen, setIsAddOpen]           = useState(false);
-  const [isEditOpen, setIsEditOpen]         = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen]     = useState(false);
+  const [products, setProducts]               = useState([]);
+  const [isLoading, setIsLoading]             = useState(true);
+  const [search, setSearch]                   = useState('');
+  const [filter, setFilter]                   = useState('ALL');
+  const [isAddOpen, setIsAddOpen]             = useState(false);
+  const [isEditOpen, setIsEditOpen]           = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen]       = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [formData, setFormData]             = useState({ prodcode: '', description: '', unit: '', current_price: '' });
-  const [toast, setToast]                   = useState(null);
-  const [sortCol, setSortCol]               = useState(null);
-  const [sortDir, setSortDir]               = useState('asc');
+  const [formData, setFormData]               = useState({ prodcode: '', description: '', unit: '', current_price: '' });
+  const [toast, setToast]                     = useState(null);
+  const [sortCol, setSortCol]                 = useState(null);
+  const [sortDir, setSortDir]                 = useState('asc');
   const [expandedProdcode, setExpandedProdcode] = useState(null);
 
   const isAdmin = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERADMIN';
@@ -154,6 +156,7 @@ const ProductListPage = () => {
     return <span style={{marginLeft:4,fontSize:10,color:'#b91c1c'}}>{sortDir==='asc'?'↑':'↓'}</span>;
   };
 
+  // FIX: Updated to 8 and 7 because of the new 'History' column
   const colCount = isAdmin ? 8 : 7;
 
   return (
@@ -367,7 +370,6 @@ const ProductListPage = () => {
       `}</style>
 
       <div className="plp-root">
-
         {/* ══ TOPBAR ══ */}
         <div className="plp-topbar">
           <div>
@@ -388,7 +390,6 @@ const ProductListPage = () => {
 
         {/* ══ BODY ══ */}
         <div className="plp-body">
-
           {/* Stat cards */}
           <div className="stat-row">
             <div className="stat-card s-total">
@@ -486,8 +487,10 @@ const ProductListPage = () => {
                     <th className="th-noclick">Unit</th>
                     <th onClick={()=>handleSort('current_price')}>Price <SortIcon col="current_price" /></th>
                     <th onClick={()=>handleSort('record_status')}>Status <SortIcon col="record_status" /></th>
-                    {/* Stamp column — ADMIN/SUPERADMIN only */}
-                    {isAdmin && <th onClick={()=>handleSort('updated_at')}>Last Updated <SortIcon col="updated_at" /></th>}
+                    
+                    {/* Stamp column */}
+                    {isAdmin && <th onClick={()=>handleSort('stamp')}>Last Updated <SortIcon col="stamp" /></th>}
+                    
                     <th className="th-noclick">History</th>
                     <th className="th-noclick">Actions</th>
                   </tr>
@@ -517,8 +520,9 @@ const ProductListPage = () => {
                                 <span className="badge-dot" />{p.record_status}
                               </span>
                             </td>
-                            {/* Stamp column — gated by isAdmin */}
-                            {isAdmin && <td><span className="cell-stamp">{p.updated_at||'—'}</span></td>}
+
+                            {/* Stamp column */}
+                            {isAdmin && <td><span className="cell-stamp">{p.stamp || '—'}</span></td>}
 
                             <td>
                               <button
@@ -567,8 +571,8 @@ const ProductListPage = () => {
       </div>
 
       {/* ══ MODALS ══ */}
-      <AddProductModal   isOpen={isAddOpen}    onClose={()=>setIsAddOpen(false)}    formData={formData} setFormData={setFormData} onSubmit={handleAddSubmit} />
-      <EditProductModal  isOpen={isEditOpen}   onClose={()=>setIsEditOpen(false)}   formData={formData} setFormData={setFormData} selectedProduct={selectedProduct} onSubmit={handleEditSubmit} />
+      <AddProductModal   isOpen={isAddOpen}    onClose={()=>setIsAddOpen(false)}   formData={formData} setFormData={setFormData} onSubmit={handleAddSubmit} />
+      <EditProductModal  isOpen={isEditOpen}   onClose={()=>setIsEditOpen(false)}  formData={formData} setFormData={setFormData} selectedProduct={selectedProduct} onSubmit={handleEditSubmit} />
       <SoftDeleteDialog  isOpen={isDeleteOpen} onClose={()=>setIsDeleteOpen(false)} selectedProduct={selectedProduct} onSubmit={handleDeleteSubmit} />
 
       {/* ══ TOAST ══ */}
