@@ -9,25 +9,29 @@ import {
 import AddProductModal    from '../components/AddProductModal';
 import EditProductModal   from '../components/EditProductModal';
 import SoftDeleteDialog   from '../components/SoftDeleteDialog';
-import PriceHistoryPanel  from '../components/PriceHistoryPanel'; // PR-03
+import PriceHistoryPanel  from '../components/PriceHistoryPanel';
+import { useRights }      from '../hooks/useRights';
+import { useAuth }        from '../contexts/AuthContext';
 
 const ProductListPage = () => {
-  const [products, setProducts]             = useState([]);
-  const [isLoading, setIsLoading]           = useState(true);
-  const [currentUserRole, setCurrentUserRole] = useState('ADMIN');
-  const [perms, setPerms]                   = useState({ PRD_ADD: 1, PRD_EDIT: 1, PRD_DEL: 1 });
-  const [search, setSearch]                 = useState('');
-  const [filter, setFilter]                 = useState('ALL');
-  const [isAddOpen, setIsAddOpen]           = useState(false);
-  const [isEditOpen, setIsEditOpen]         = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen]     = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(null);
-  const [formData, setFormData]             = useState({ prodcode: '', description: '', unit: '', current_price: '' });
-  const [toast, setToast]                   = useState(null);
-  const [sortCol, setSortCol]               = useState(null);
-  const [sortDir, setSortDir]               = useState('asc');
+  const { currentUser } = useAuth();
+  const { rights }      = useRights();
+  
+  // FIX: Changed .role to .user_type to match your SQL schema
+  const currentUserRole = currentUser?.user_type || 'USER';
 
-  // PR-03: which prodcode's history panel is currently expanded (null = none)
+  const [products, setProducts]               = useState([]);
+  const [isLoading, setIsLoading]             = useState(true);
+  const [search, setSearch]                   = useState('');
+  const [filter, setFilter]                   = useState('ALL');
+  const [isAddOpen, setIsAddOpen]             = useState(false);
+  const [isEditOpen, setIsEditOpen]           = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen]       = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [formData, setFormData]               = useState({ prodcode: '', description: '', unit: '', current_price: '' });
+  const [toast, setToast]                     = useState(null);
+  const [sortCol, setSortCol]                 = useState(null);
+  const [sortDir, setSortDir]                 = useState('asc');
   const [expandedProdcode, setExpandedProdcode] = useState(null);
 
   const isAdmin = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERADMIN';
@@ -112,7 +116,6 @@ const ProductListPage = () => {
     setIsDeleteOpen(true);
   };
 
-  // PR-03: toggle price history panel; collapse if same row clicked again
   const togglePriceHistory = (prodcode) => {
     setExpandedProdcode(prev => prev === prodcode ? null : prodcode);
   };
@@ -153,8 +156,7 @@ const ProductListPage = () => {
     return <span style={{marginLeft:4,fontSize:10,color:'#b91c1c'}}>{sortDir==='asc'?'↑':'↓'}</span>;
   };
 
-  // PR-03: total column count (needed for colSpan on the panel row)
-  const colCount = isAdmin ? 8 : 7; // code, desc, unit, price, status, [updated_at], history, actions
+  const colCount = isAdmin ? 8 : 7;
 
   return (
     <>
@@ -196,7 +198,6 @@ const ProductListPage = () => {
 
         .plp-root { background:var(--bg);min-height:100vh;font-family:'DM Sans',sans-serif;color:var(--ink); }
 
-        /* ── Topbar ── */
         .plp-topbar {
           position:sticky;top:0;z-index:30;
           background:rgba(247,247,249,0.9);backdrop-filter:blur(16px);
@@ -207,10 +208,6 @@ const ProductListPage = () => {
         }
         .plp-title { font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;color:var(--ink);margin:0;letter-spacing:-.3px; }
         .plp-subtitle { font-size:11px;font-weight:500;color:var(--muted);letter-spacing:.5px;text-transform:uppercase; }
-        .role-tabs { display:flex;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:3px;gap:2px; }
-        .role-tab { padding:6px 15px;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s ease;background:transparent;color:var(--muted);white-space:nowrap; }
-        .role-tab.active { background:linear-gradient(135deg,var(--red-deep),var(--red-mid) 55%,var(--red-bright));color:#fff;box-shadow:0 2px 10px var(--red-glow); }
-        .top-div { width:1px;height:32px;background:var(--border); }
         .add-btn { display:flex;align-items:center;gap:8px;padding:10px 22px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--red-deep),var(--red-mid) 55%,var(--red-bright));color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 18px var(--red-glow),0 1px 0 rgba(255,255,255,.15) inset;transition:transform .15s,box-shadow .15s;letter-spacing:.2px; }
         .add-btn:hover { transform:translateY(-2px);box-shadow:0 8px 24px rgba(185,28,28,.35),0 1px 0 rgba(255,255,255,.15) inset; }
         .add-btn:active { transform:translateY(0); }
@@ -218,7 +215,6 @@ const ProductListPage = () => {
 
         .plp-body { padding:28px 36px;display:flex;flex-direction:column;gap:24px; }
 
-        /* ── Stat row ── */
         .stat-row { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;animation:fadeUp .4s ease both .07s; }
         .stat-card { border-radius:20px;padding:22px 22px 18px;position:relative;overflow:hidden;cursor:default;transition:transform .22s cubic-bezier(.34,1.56,.64,1); }
         .stat-card:hover { transform:translateY(-4px) scale(1.01); }
@@ -271,7 +267,6 @@ const ProductListPage = () => {
         .s-active .stat-bar-fill { background:#4ade80; }
         .s-value  .stat-bar-fill { background:#60a5fa; }
 
-        /* ── Table panel ── */
         .table-panel { background:var(--surface);border-radius:20px;border:1px solid var(--border);overflow:hidden;animation:fadeUp .4s ease both .14s;box-shadow:0 1px 3px rgba(0,0,0,.04); }
         .panel-toolbar { padding:18px 24px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap; }
         .toolbar-left { display:flex;align-items:center;gap:12px; }
@@ -290,7 +285,6 @@ const ProductListPage = () => {
         .f-chip.fc-active { border-color:#bbf7d0;background:var(--green-bg);color:var(--green-text); }
         .f-chip.fc-inact  { border-color:#fde68a;background:var(--amber-bg);color:var(--amber-text); }
 
-        /* ── Table ── */
         .plp-table { width:100%;border-collapse:collapse; }
         .plp-table thead { background:#fafafa; }
         .plp-table th { padding:11px 20px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;text-align:left;cursor:pointer;user-select:none;white-space:nowrap;transition:color .15s; }
@@ -299,14 +293,10 @@ const ProductListPage = () => {
         .plp-table td { padding:14px 20px;border-top:1px solid #f3f4f6;font-size:13px;font-weight:500;color:var(--ink-3);vertical-align:middle; }
         .plp-table tbody tr { transition:background .12s; }
         .plp-table tbody tr:hover td { background:#fafafa; }
-
-        /* PR-03: expanded product row */
         .plp-table tbody tr.row-expanded td { background:#fef9f9; }
-        /* PR-03: panel row — remove padding & hover */
         .plp-table tbody tr.row-panel td { padding:0;border-top:none; }
         .plp-table tbody tr.row-panel:hover td { background:transparent; }
 
-        /* ── Cell types ── */
         .cell-code { font-family:'DM Mono',monospace;font-size:11.5px;font-weight:500;color:var(--violet-text);background:var(--violet-bg);padding:4px 9px;border-radius:7px;display:inline-block;letter-spacing:.3px; }
         .cell-desc { color:var(--ink-2);font-weight:600; }
         .cell-unit { font-size:11px;font-weight:600;color:var(--muted);background:#f3f4f6;border-radius:6px;padding:3px 8px;display:inline-block;text-transform:uppercase;letter-spacing:.5px; }
@@ -324,8 +314,6 @@ const ProductListPage = () => {
         .act-btn.ab-edit:hover { background:#dbeafe;border-color:#93c5fd; }
         .act-btn.ab-del  { color:var(--red-mid);border-color:#fecaca;background:var(--red-pale); }
         .act-btn.ab-del:hover { background:#fee2e2;border-color:#fca5a5; }
-
-        /* PR-03: history toggle button */
         .act-btn.ab-hist { color:var(--violet-text);border-color:#ddd6fe;background:var(--violet-bg); }
         .act-btn.ab-hist:hover { background:#ede9fe;border-color:#c4b5fd; }
         .act-btn.ab-hist.ab-hist-open { background:var(--violet-text);color:#fff;border-color:var(--violet-text); }
@@ -335,7 +323,6 @@ const ProductListPage = () => {
         .loader { width:28px;height:28px;border:3px solid #f3f4f6;border-top-color:var(--red-mid);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px; }
         .empty-icon { font-size:32px;margin-bottom:8px; }
 
-        /* ── Toast ── */
         .toast-wrap { position:fixed;bottom:28px;right:28px;z-index:200;animation:toastIn .25s ease; }
         .toast { display:flex;align-items:center;gap:10px;padding:13px 18px;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,.14);backdrop-filter:blur(8px);min-width:240px; }
         .toast.t-success { background:#fff;border:1px solid #bbf7d0;color:var(--green-text); }
@@ -344,7 +331,6 @@ const ProductListPage = () => {
         .toast.t-success .toast-dot { background:var(--green-text); }
         .toast.t-error   .toast-dot { background:#dc2626; }
 
-        /* ── Modals ── */
         .modal-overlay { position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn .18s ease; }
         .modal-box { background:#fff;border-radius:20px;width:100%;max-width:460px;box-shadow:0 24px 64px rgba(0,0,0,.2);animation:slideIn .22s ease;overflow:hidden; }
         .modal-header { padding:26px 26px 0; }
@@ -377,14 +363,12 @@ const ProductListPage = () => {
           .plp-topbar { padding:14px 20px;flex-wrap:wrap;height:auto;gap:12px; }
           .plp-body   { padding:20px; }
           .stat-row   { grid-template-columns:1fr; }
-          .role-tabs  { flex-wrap:wrap; }
           .panel-toolbar { flex-direction:column;align-items:flex-start; }
           .modal-box  { max-width:100%; }
         }
       `}</style>
 
       <div className="plp-root">
-
         {/* ══ TOPBAR ══ */}
         <div className="plp-topbar">
           <div>
@@ -395,29 +379,16 @@ const ProductListPage = () => {
             <div className="plp-subtitle">Inventory Management System</div>
           </div>
 
-          <div style={{display:'flex',alignItems:'center',gap:14}}>
-            <div style={{display:'flex',alignItems:'center',gap:10}}>
-              <span style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.4px',color:'var(--muted)'}}>Role</span>
-              <div className="role-tabs">
-                {['USER','ADMIN','SUPERADMIN'].map(r => (
-                  <button key={r} className={`role-tab ${currentUserRole===r?'active':''}`} onClick={()=>setCurrentUserRole(r)}>
-                    {r==='USER'?'Standard User':r==='ADMIN'?'Admin':'Super Admin'}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="top-div" />
-            {perms.PRD_ADD===1 && (
-              <button className="add-btn" onClick={()=>{setFormData({prodcode:'',description:'',unit:'',current_price:''});setIsAddOpen(true);}}>
-                <div className="add-btn-icon">+</div>Add Product
-              </button>
-            )}
-          </div>
+          {/* Add button — gated by rights.PRD_ADD */}
+          {rights.PRD_ADD === 1 && (
+            <button className="add-btn" onClick={()=>{setFormData({prodcode:'',description:'',unit:'',current_price:''});setIsAddOpen(true);}}>
+              <div className="add-btn-icon">+</div>Add Product
+            </button>
+          )}
         </div>
 
         {/* ══ BODY ══ */}
         <div className="plp-body">
-
           {/* Stat cards */}
           <div className="stat-row">
             <div className="stat-card s-total">
@@ -515,8 +486,10 @@ const ProductListPage = () => {
                     <th className="th-noclick">Unit</th>
                     <th onClick={()=>handleSort('current_price')}>Price <SortIcon col="current_price" /></th>
                     <th onClick={()=>handleSort('record_status')}>Status <SortIcon col="record_status" /></th>
-                    {isAdmin && <th onClick={()=>handleSort('updated_at')}>Last Updated <SortIcon col="updated_at" /></th>}
-                    {/* PR-03 */}
+                    
+                    {/* Stamp column — FIX: Changed updated_at to stamp to match SQL */}
+                    {isAdmin && <th onClick={()=>handleSort('stamp')}>Last Updated <SortIcon col="stamp" /></th>}
+                    
                     <th className="th-noclick">History</th>
                     <th className="th-noclick">Actions</th>
                   </tr>
@@ -536,8 +509,6 @@ const ProductListPage = () => {
                       const isExpanded = expandedProdcode === p.prodcode;
                       return (
                         <React.Fragment key={p.prodcode}>
-
-                          {/* ── Product row ── */}
                           <tr className={isExpanded ? 'row-expanded' : ''}>
                             <td><span className="cell-code">{p.prodcode}</span></td>
                             <td><span className="cell-desc">{p.description}</span></td>
@@ -548,9 +519,10 @@ const ProductListPage = () => {
                                 <span className="badge-dot" />{p.record_status}
                               </span>
                             </td>
-                            {isAdmin && <td><span className="cell-stamp">{p.updated_at||'—'}</span></td>}
 
-                            {/* PR-03: History toggle */}
+                            {/* Stamp column — FIX: Changed p.updated_at to p.stamp */}
+                            {isAdmin && <td><span className="cell-stamp">{p.stamp || '—'}</span></td>}
+
                             <td>
                               <button
                                 className={`act-btn ab-hist ${isExpanded?'ab-hist-open':''}`}
@@ -563,13 +535,18 @@ const ProductListPage = () => {
 
                             <td>
                               <div className="act-wrap">
-                                {perms.PRD_EDIT===1 && <button className="act-btn ab-edit" onClick={()=>openEditModal(p)}>✎ Edit</button>}
-                                {perms.PRD_DEL===1  && <button className="act-btn ab-del"  onClick={()=>openDeleteModal(p)}>⊘ Delete</button>}
+                                {/* Edit — gated by rights.PRD_EDIT */}
+                                {rights.PRD_EDIT === 1 && (
+                                  <button className="act-btn ab-edit" onClick={()=>openEditModal(p)}>✎ Edit</button>
+                                )}
+                                {/* Delete — gated by rights.PRD_DEL */}
+                                {rights.PRD_DEL === 1 && (
+                                  <button className="act-btn ab-del" onClick={()=>openDeleteModal(p)}>⊘ Delete</button>
+                                )}
                               </div>
                             </td>
                           </tr>
 
-                          {/* PR-03: Price History Panel — expands directly below its row */}
                           {isExpanded && (
                             <tr className="row-panel">
                               <td colSpan={colCount}>
@@ -581,7 +558,6 @@ const ProductListPage = () => {
                               </td>
                             </tr>
                           )}
-
                         </React.Fragment>
                       );
                     })
