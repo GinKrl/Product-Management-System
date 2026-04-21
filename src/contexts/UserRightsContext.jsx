@@ -11,7 +11,9 @@ export function UserRightsProvider({ children }) {
 
   useEffect(() => {
     const fetchRights = async () => {
-      if (!currentUser?.id) {
+      const userId = currentUser?.id; 
+
+      if (!userId) {
         setRights({});
         setLoadingRights(false);
         return;
@@ -20,16 +22,23 @@ export function UserRightsProvider({ children }) {
       setLoadingRights(true);
       try {
         const { data, error } = await supabase
-          .from("UserModule_Rights")
-          .select("module_code, can_access")
-          .eq("user_id", currentUser.id);
+          .from("usermodule_rights")
+          .select(`
+            right_id,
+            rights (
+              right_name
+            )
+          `)
+          .eq("user_id", userId);
 
         if (error) throw error;
 
-        // Convert array to map: { PRD_ADD: 1, PRD_EDIT: 1, PRD_DEL: 0, ... }
         const rightsMap = {};
-        (data || []).forEach(({ module_code, can_access }) => {
-          rightsMap[module_code] = can_access ? 1 : 0;
+        (data || []).forEach((row) => {
+          const name = row.rights?.right_name;
+          if (name) {
+            rightsMap[name] = 1;
+          }
         });
 
         setRights(rightsMap);
@@ -52,5 +61,9 @@ export function UserRightsProvider({ children }) {
 }
 
 export function useRightsContext() {
-  return useContext(UserRightsContext);
+  const context = useContext(UserRightsContext);
+  if (!context) {
+    throw new Error("useRightsContext must be used within a UserRightsProvider");
+  }
+  return context;
 }
