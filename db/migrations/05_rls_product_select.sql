@@ -10,7 +10,11 @@ ON product
 FOR SELECT 
 TO authenticated
 USING (
-  (auth.jwt() ->> 'role' IN ('ADMIN', 'SUPERADMIN')) 
+  -- Check your custom user table instead of the JWT
+  (EXISTS (
+    SELECT 1 FROM "user" 
+    WHERE id = auth.uid() AND user_type IN ('ADMIN', 'SUPERADMIN')
+  )) 
   OR 
   (record_status = 'ACTIVE')
 );
