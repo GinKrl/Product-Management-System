@@ -17,8 +17,8 @@ const ProductListPage = () => {
   const { currentUser } = useAuth();
   const { rights }      = useRights();
   
-  // FIX: Ensure this matches the 'user_type' column in your Supabase 'users' table
-  const currentUserRole = currentUser?.user_type?.toUpperCase() || 'USER';
+  // FIX: Changed .role to .user_type to match your SQL schema
+  const currentUserRole = currentUser?.user_type || 'USER';
 
   const [products, setProducts]               = useState([]);
   const [isLoading, setIsLoading]             = useState(true);
@@ -488,7 +488,7 @@ const ProductListPage = () => {
                     <th onClick={()=>handleSort('current_price')}>Price <SortIcon col="current_price" /></th>
                     <th onClick={()=>handleSort('record_status')}>Status <SortIcon col="record_status" /></th>
                     
-                    {/* Stamp column */}
+                    {/* Stamp column — FIX: Changed updated_at to stamp to match SQL */}
                     {isAdmin && <th onClick={()=>handleSort('stamp')}>Last Updated <SortIcon col="stamp" /></th>}
                     
                     <th className="th-noclick">History</th>
@@ -521,7 +521,7 @@ const ProductListPage = () => {
                               </span>
                             </td>
 
-                            {/* Stamp column */}
+                            {/* Stamp column — FIX: Changed p.updated_at to p.stamp */}
                             {isAdmin && <td><span className="cell-stamp">{p.stamp || '—'}</span></td>}
 
                             <td>

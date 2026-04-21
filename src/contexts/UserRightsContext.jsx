@@ -11,6 +11,7 @@ export function UserRightsProvider({ children }) {
 
   useEffect(() => {
     const fetchRights = async () => {
+      // Use currentUser.id or currentUser.uuid depending on your AuthContext structure
       const userId = currentUser?.id; 
 
       if (!userId) {
@@ -21,6 +22,7 @@ export function UserRightsProvider({ children }) {
 
       setLoadingRights(true);
       try {
+        // Query the junction table and JOIN with the rights table
         const { data, error } = await supabase
           .from("usermodule_rights")
           .select(`
@@ -33,6 +35,8 @@ export function UserRightsProvider({ children }) {
 
         if (error) throw error;
 
+        // Convert the array of joined objects into a flat map
+        // Result: { PRD_ADD: 1, PRD_EDIT: 1, PRD_DEL: 1 }
         const rightsMap = {};
         (data || []).forEach((row) => {
           const name = row.rights?.right_name;
