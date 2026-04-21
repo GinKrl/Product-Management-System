@@ -1,7 +1,5 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider }        from './contexts/AuthContext';
-import { UserRightsProvider }  from './contexts/UserRightsContext';
 import Login                   from './pages/Login';
 import Register                from './pages/Register';
 import AppShell                from './components/AppShell';
@@ -13,44 +11,40 @@ import DeletedItemsPage        from './pages/DeletedItemsPage';
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <UserRightsProvider>
-          <Routes>
-            {/* ── Public routes ── */}
-            <Route path="/login"         element={<Login />} />
-            <Route path="/register"      element={<Register />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
+      <Routes>
+        {/* ── Public routes ── */}
+        <Route path="/login"         element={<Login />} />
+        <Route path="/register"      element={<Register />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
 
-            {/* ── Product Masterlist ── */}
-            <Route
-              path="/products"
-              element={
-                <ProtectedRoute>
-                  <AppShell>
-                    <ProductListPage />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
+        {/* ── Product Masterlist ── */}
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute>
+              <AppShell>
+                <ProductListPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
 
-            {/* ── PR-03 / PR-04: Deleted Items — ADMIN / SUPERADMIN only ── */}
-            <Route
-              path="/deleted-items"
-              element={
-                <ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}>
-                  <AppShell>
-                    <DeletedItemsPage />
-                  </AppShell>
-                </ProtectedRoute>
-              }
-            />
+        {/* ── PR-03 / PR-04: Deleted Items — ADMIN / SUPERADMIN only ── */}
+        <Route
+          path="/deleted-items"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}>
+              <AppShell>
+                <DeletedItemsPage />
+              </AppShell>
+            </ProtectedRoute>
+          }
+        />
 
-            {/* ── Redirects ── */}
-            <Route path="/dashboard" element={<Navigate to="/products" replace />} />
-            <Route path="/"          element={<Navigate to="/products" replace />} />
-          </Routes>
-        </UserRightsProvider>
-      </AuthProvider>
+        {/* ── Redirects ── */}
+        <Route path="/dashboard" element={<Navigate to="/products" replace />} />
+        <Route path="/"          element={<Navigate to="/products" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 }
