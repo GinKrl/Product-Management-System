@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useRights } from '../hooks/useRights'; // Added this hook
 import { supabase } from '../lib/supabaseClient';
 
 // ── Nav config ────────────────────────────────────────────────
@@ -44,7 +45,7 @@ const NAV_ITEMS = [
       {
         label: 'Deleted Items',
         href: '/deleted-items',
-        roles: ['ADMIN', 'SUPERADMIN'], // PR-03: role-gated
+        roles: ['ADMIN', 'SUPERADMIN'], 
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <polyline points="3 6 5 6 21 6" />
@@ -112,14 +113,13 @@ const NAV_ITEMS = [
   },
 ];
 
-// PR-03: canSee — centralized role check, case-insensitive
+// Centralized role check
 const canSee = (allowedRoles, userRole) => {
   if (!allowedRoles) return true;
   if (!userRole) return false;
   return allowedRoles.some(r => r.toUpperCase() === userRole.toUpperCase());
 };
 
-// PR-03: derive readable page label from pathname
 const getPageLabel = (pathname) => {
   const map = {
     '/products':      'Products',
@@ -141,16 +141,17 @@ const AppShell = ({ children }) => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { currentUser } = useAuth();
+  const { loadingRights } = useRights(); // sourcing loading state
 
   const userEmail    = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
 
-  // PR-03: role sourced from AuthContext (maps DB user_type → role)
-  const userRole = currentUser?.role?.toUpperCase() || 'USER';
+  // FIX: sourcing from user_type to match DB and ProtectedRoute logic
+  const userRole = currentUser?.user_type?.toUpperCase() || 'USER';
 
-  const SIDEBAR_W  = 232;
+  const SIDEBAR_W   = 232;
   const COLLAPSED_W = 64;
-  const NAVBAR_H   = 56;
+  const NAVBAR_H    = 56;
   const effectiveW = sidebarOpen ? SIDEBAR_W : COLLAPSED_W;
 
   const handleLogout = async () => {
@@ -256,6 +257,9 @@ const AppShell = ({ children }) => {
                     </p>
                   )}
                   {visibleItems.map((item) => {
+                    // Prevent showing protected links while permissions are still being verified
+                    if (loadingRights && item.roles) return null;
+
                     const isActive      = location.pathname === item.href;
                     const isDeletedItems = item.href === '/deleted-items';
                     return (
@@ -332,7 +336,7 @@ const AppShell = ({ children }) => {
               </svg>
             </button>
 
-            {/* PR-03: Dynamic breadcrumb using getPageLabel() */}
+            {/* Dynamic breadcrumb using getPageLabel() */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
               <span style={{ fontSize: 11, color: '#d1d5db' }}>HOPE, INC.</span>
               <span style={{ fontSize: 11, color: '#e5e7eb' }}>/</span>
