@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useRights } from '../hooks/useRights'; // Added this hook
+import { useRights } from '../hooks/useRights';
 import { supabase } from '../lib/supabaseClient';
 
 // ── Nav config ────────────────────────────────────────────────
@@ -140,14 +140,17 @@ const AppShell = ({ children }) => {
 
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { currentUser } = useAuth();
-  const { loadingRights } = useRights(); // sourcing loading state
+  
+  // Destructure both currentUser and loading from Auth
+  const { currentUser, loading: loadingAuth } = useAuth();
+  const { loadingRights } = useRights(); 
 
   const userEmail    = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
+  const userRole     = currentUser?.user_type?.toUpperCase() || 'USER';
 
-  // FIX: sourcing from user_type to match DB and ProtectedRoute logic
-  const userRole = currentUser?.user_type?.toUpperCase() || 'USER';
+  // Combined loading state to prevent UI flicker
+  const isSyncing = loadingAuth || loadingRights;
 
   const SIDEBAR_W   = 232;
   const COLLAPSED_W = 64;
@@ -245,7 +248,9 @@ const AppShell = ({ children }) => {
           {/* Nav */}
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
+              // Hide whole sections if user doesn't have permissions
               if (!canSee(section.roles, userRole)) return null;
+              
               const visibleItems = section.items.filter(item => canSee(item.roles, userRole));
               if (visibleItems.length === 0) return null;
 
@@ -257,8 +262,8 @@ const AppShell = ({ children }) => {
                     </p>
                   )}
                   {visibleItems.map((item) => {
-                    // Prevent showing protected links while permissions are still being verified
-                    if (loadingRights && item.roles) return null;
+                    // Safety check: hide role-gated items while loading is in progress
+                    if (isSyncing && item.roles) return null;
 
                     const isActive      = location.pathname === item.href;
                     const isDeletedItems = item.href === '/deleted-items';
@@ -298,7 +303,7 @@ const AppShell = ({ children }) => {
               {sidebarOpen && (
                 <div style={{ overflow: 'hidden', minWidth: 0, flex: 1 }}>
                   <p style={{ fontSize: 12, fontWeight: 700, color: '#0f0a1e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail.split('@')[0]}</p>
-                  <p style={{ fontSize: 10, color: '#9ca3af', textTransform: 'uppercase' }}>{userRole}</p>
+                  <p style={{ fontSize: 10, color: '#9ca3af', textTransform: 'uppercase' }}>{isSyncing ? '...' : userRole}</p>
                 </div>
               )}
             </div>
@@ -319,7 +324,6 @@ const AppShell = ({ children }) => {
 
         {/* ── Main content ── */}
         <div className="shell-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-
           {/* Navbar */}
           <header style={{
             position: 'absolute', top: 0, left: 0, right: 0,
@@ -336,7 +340,6 @@ const AppShell = ({ children }) => {
               </svg>
             </button>
 
-            {/* Dynamic breadcrumb using getPageLabel() */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
               <span style={{ fontSize: 11, color: '#d1d5db' }}>HOPE, INC.</span>
               <span style={{ fontSize: 11, color: '#e5e7eb' }}>/</span>
@@ -373,7 +376,6 @@ const AppShell = ({ children }) => {
             </div>
           </header>
 
-          {/* Page content */}
           <main style={{
             flex: 1,
             overflowY: 'auto',
