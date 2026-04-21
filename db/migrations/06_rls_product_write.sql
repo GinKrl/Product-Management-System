@@ -4,7 +4,11 @@ ON product
 FOR INSERT 
 TO authenticated
 WITH CHECK (
-  (auth.jwt() -> 'app_metadata' ->> 'PRD_ADD')::int = 1
+  EXISTS (
+    SELECT 1 FROM usermodule_rights umr
+    JOIN rights r ON umr.right_id = r.id
+    WHERE umr.user_id = auth.uid() AND r.right_name = 'PRD_ADD'
+  )
 );
 
 -- 2. UPDATE Policy (General Edit): only if PRD_EDIT right = 1
@@ -13,10 +17,11 @@ ON product
 FOR UPDATE
 TO authenticated
 USING (
-  (auth.jwt() -> 'app_metadata' ->> 'PRD_EDIT')::int = 1
-)
-WITH CHECK (
-  (auth.jwt() -> 'app_metadata' ->> 'PRD_EDIT')::int = 1
+  EXISTS (
+    SELECT 1 FROM usermodule_rights umr
+    JOIN rights r ON umr.right_id = r.id
+    WHERE umr.user_id = auth.uid() AND r.right_name = 'PRD_EDIT'
+  )
 );
 
 -- 3. UPDATE Policy (Soft Delete): record_status to INACTIVE if PRD_DEL right = 1
@@ -25,7 +30,11 @@ ON product
 FOR UPDATE
 TO authenticated
 USING (
-  (auth.jwt() -> 'app_metadata' ->> 'PRD_DEL')::int = 1
+  EXISTS (
+    SELECT 1 FROM usermodule_rights umr
+    JOIN rights r ON umr.right_id = r.id
+    WHERE umr.user_id = auth.uid() AND r.right_name = 'PRD_DEL'
+  )
 )
 WITH CHECK (
   record_status = 'INACTIVE'
@@ -37,7 +46,10 @@ ON product
 FOR UPDATE
 TO authenticated
 USING (
-  auth.jwt() ->> 'role' IN ('ADMIN', 'SUPERADMIN')
+  EXISTS (
+    SELECT 1 FROM "user" 
+    WHERE id = auth.uid() AND user_type IN ('ADMIN', 'SUPERADMIN')
+  )
 )
 WITH CHECK (
   record_status = 'ACTIVE'
