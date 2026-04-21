@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useRights } from '../hooks/useRights'; // Added this hook
 import { supabase } from '../lib/supabaseClient';
 
-// ── AppShell ──────────────────────────────────────────────────
-
+// ── Nav config ────────────────────────────────────────────────
 const NAV_ITEMS = [
   {
     section: 'Main',
@@ -42,11 +42,10 @@ const NAV_ITEMS = [
           </svg>
         ),
       },
-      // PR-04: Deleted Items — restricted access
       {
         label: 'Deleted Items',
         href: '/deleted-items',
-        roles: ['ADMIN', 'SUPERADMIN'], // Standardized to match DB/AuthContext typical caps
+        roles: ['ADMIN', 'SUPERADMIN'], 
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <polyline points="3 6 5 6 21 6" />
@@ -77,7 +76,8 @@ const NAV_ITEMS = [
         roles: ['ADMIN', 'MANAGER'],
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
-            <circle cx="12" cy="12" r="9" /><path d="M12 8v4l3 3" />
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8v4l3 3" />
           </svg>
         ),
       },
@@ -85,22 +85,23 @@ const NAV_ITEMS = [
   },
   {
     section: 'Settings',
-    roles: ['ADMIN'],
+    roles: ['ADMIN', 'SUPERADMIN'],
     items: [
       {
         label: 'Team',
         href: '#',
-        roles: ['ADMIN'],
+        roles: ['ADMIN', 'SUPERADMIN'],
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
-            <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
           </svg>
         ),
       },
       {
         label: 'Preferences',
         href: '#',
-        roles: ['ADMIN'],
+        roles: ['ADMIN', 'SUPERADMIN'],
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <circle cx="12" cy="12" r="3" />
@@ -112,31 +113,45 @@ const NAV_ITEMS = [
   },
 ];
 
-// Helper: Improved to handle case-insensitivity
+// Centralized role check
 const canSee = (allowedRoles, userRole) => {
   if (!allowedRoles) return true;
   if (!userRole) return false;
-  return allowedRoles.some(role => role.toUpperCase() === userRole.toUpperCase());
+  return allowedRoles.some(r => r.toUpperCase() === userRole.toUpperCase());
 };
 
+const getPageLabel = (pathname) => {
+  const map = {
+    '/products':      'Products',
+    '/deleted-items': 'Deleted Items',
+    '/orders':        'Orders',
+    '/customers':     'Customers',
+    '/reports':       'Reports',
+    '/insights':      'Insights',
+  };
+  return map[pathname] ?? 'Dashboard';
+};
+
+// ── AppShell ──────────────────────────────────────────────────
 const AppShell = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen,  setMobileOpen]  = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  
-  const navigate = useNavigate();
-  const location = useLocation();
+
+  const navigate  = useNavigate();
+  const location  = useLocation();
   const { currentUser } = useAuth();
+  const { loadingRights } = useRights(); // sourcing loading state
 
-  const userEmail = currentUser?.email || 'User';
+  const userEmail    = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
-  
-  // FIX: Dynamic role from AuthContext instead of hardcoded 'admin'
-  const userRole = currentUser?.role || 'USER'; 
 
-  const SIDEBAR_W = 232;
+  // FIX: sourcing from user_type to match DB and ProtectedRoute logic
+  const userRole = currentUser?.user_type?.toUpperCase() || 'USER';
+
+  const SIDEBAR_W   = 232;
   const COLLAPSED_W = 64;
-  const NAVBAR_H = 56;
+  const NAVBAR_H    = 56;
   const effectiveW = sidebarOpen ? SIDEBAR_W : COLLAPSED_W;
 
   const handleLogout = async () => {
@@ -145,11 +160,8 @@ const AppShell = ({ children }) => {
   };
 
   const toggleSidebar = () => {
-    if (window.innerWidth <= 768) {
-      setMobileOpen(o => !o);
-    } else {
-      setSidebarOpen(s => !s);
-    }
+    if (window.innerWidth <= 768) setMobileOpen(o => !o);
+    else setSidebarOpen(s => !s);
   };
 
   return (
@@ -181,7 +193,6 @@ const AppShell = ({ children }) => {
         }
         .sidebar-scroll::-webkit-scrollbar { width: 4px; }
         .sidebar-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
-
         .nav-item.active-deleted { background: linear-gradient(90deg,#fffbeb,#fef3c7) !important; color: #b45309 !important; border-left: 3px solid #f59e0b !important; }
         .nav-item.active-deleted svg { color: #b45309; }
       `}</style>
@@ -192,6 +203,7 @@ const AppShell = ({ children }) => {
       >
         {mobileOpen && <div className="mobile-overlay" onClick={() => setMobileOpen(false)} />}
 
+        {/* ── Sidebar ── */}
         <aside
           className={`shell-sidebar sidebar-scroll ${mobileOpen ? 'mobile-open' : ''}`}
           style={{
@@ -204,6 +216,7 @@ const AppShell = ({ children }) => {
             boxShadow: '2px 0 16px rgba(0,0,0,0.04)',
           }}
         >
+          {/* Logo */}
           <div style={{
             height: NAVBAR_H, display: 'flex', alignItems: 'center', gap: 10,
             padding: sidebarOpen ? '0 18px' : '0',
@@ -217,7 +230,8 @@ const AppShell = ({ children }) => {
               boxShadow: '0 3px 10px rgba(185,28,28,0.35)',
             }}>
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth="2.4">
-                <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
+                <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/>
+                <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
               </svg>
             </div>
             {sidebarOpen && (
@@ -228,12 +242,10 @@ const AppShell = ({ children }) => {
             )}
           </div>
 
+          {/* Nav */}
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
-              // Section visibility check
               if (!canSee(section.roles, userRole)) return null;
-              
-              // Filter items within section
               const visibleItems = section.items.filter(item => canSee(item.roles, userRole));
               if (visibleItems.length === 0) return null;
 
@@ -245,7 +257,10 @@ const AppShell = ({ children }) => {
                     </p>
                   )}
                   {visibleItems.map((item) => {
-                    const isActive = location.pathname === item.href;
+                    // Prevent showing protected links while permissions are still being verified
+                    if (loadingRights && item.roles) return null;
+
+                    const isActive      = location.pathname === item.href;
                     const isDeletedItems = item.href === '/deleted-items';
                     return (
                       <a
@@ -258,9 +273,7 @@ const AppShell = ({ children }) => {
                           padding: sidebarOpen ? '9px 18px' : '10px 0',
                           justifyContent: sidebarOpen ? 'flex-start' : 'center',
                           fontSize: 13, fontWeight: isActive ? 700 : 500,
-                          color: isActive
-                            ? (isDeletedItems ? '#b45309' : '#b91c1c')
-                            : '#4b5563',
+                          color: isActive ? (isDeletedItems ? '#b45309' : '#b91c1c') : '#4b5563',
                           borderLeft: isActive
                             ? `3px solid ${isDeletedItems ? '#f59e0b' : '#b91c1c'}`
                             : '3px solid transparent',
@@ -278,6 +291,7 @@ const AppShell = ({ children }) => {
             })}
           </nav>
 
+          {/* User footer */}
           <div style={{ padding: sidebarOpen ? '12px 14px' : '12px 8px', borderTop: '1px solid rgba(0,0,0,0.06)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 12, background: '#f9fafb', border: '1px solid #f3f4f6', justifyContent: sidebarOpen ? 'flex-start' : 'center' }}>
               <div style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, background: 'linear-gradient(135deg,#fef2f2,#fca5a5)', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>{userInitials}</div>
@@ -288,44 +302,78 @@ const AppShell = ({ children }) => {
                 </div>
               )}
             </div>
-            <button className="logout-btn" onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: sidebarOpen ? 'flex-start' : 'center', width: '100%', padding: sidebarOpen ? '8px 12px' : '8px 0', borderRadius: 10, border: '1px solid #e5e7eb', background: 'transparent', color: '#6b7280', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <button
+              className="logout-btn"
+              onClick={handleLogout}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: sidebarOpen ? 'flex-start' : 'center', width: '100%', padding: sidebarOpen ? '8px 12px' : '8px 0', borderRadius: 10, border: '1px solid #e5e7eb', background: 'transparent', color: '#6b7280', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}
+            >
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
               {sidebarOpen && <span>Logout</span>}
             </button>
           </div>
         </aside>
 
+        {/* ── Main content ── */}
         <div className="shell-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+
+          {/* Navbar */}
           <header style={{
             position: 'absolute', top: 0, left: 0, right: 0,
             height: NAVBAR_H, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
             borderBottom: '1px solid rgba(0,0,0,0.07)', display: 'flex', alignItems: 'center',
-            padding: '0 24px', gap: 12, flexShrink: 0, zIndex: 50, boxShadow: '0 1px 8px rgba(0,0,0,0.04)',
+            padding: '0 24px', gap: 12, flexShrink: 0, zIndex: 50,
+            boxShadow: '0 1px 8px rgba(0,0,0,0.04)',
           }}>
             <button className="nb-icon-btn" onClick={toggleSidebar} style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', color: '#9ca3af' }}>
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
             </button>
+
+            {/* Dynamic breadcrumb using getPageLabel() */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
-              <span style={{ fontSize: 11, color: '#d1d5db' }}>HOPE, INC.</span><span style={{ fontSize: 11, color: '#e5e7eb' }}>/</span>
+              <span style={{ fontSize: 11, color: '#d1d5db' }}>HOPE, INC.</span>
+              <span style={{ fontSize: 11, color: '#e5e7eb' }}>/</span>
               <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>
-                {location.pathname === '/deleted-items' ? 'Deleted Items' : 'Products'}
+                {getPageLabel(location.pathname)}
               </span>
             </div>
-            
+
+            {/* User menu */}
             <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
-              <button onClick={() => setUserMenuOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px 5px 6px', borderRadius: 10, border: `1px solid ${userMenuOpen ? '#fca5a5' : '#e5e7eb'}`, background: userMenuOpen ? '#fef2f2' : '#fff', cursor: 'pointer' }}>
+              <button
+                onClick={() => setUserMenuOpen(o => !o)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px 5px 6px', borderRadius: 10, border: `1px solid ${userMenuOpen ? '#fca5a5' : '#e5e7eb'}`, background: userMenuOpen ? '#fef2f2' : '#fff', cursor: 'pointer' }}
+              >
                 <div style={{ width: 26, height: 26, borderRadius: 8, background: 'linear-gradient(135deg,#fef2f2,#fca5a5)', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>{userInitials}</div>
-                <div className="user-name-display"><p style={{ fontSize: 12, fontWeight: 700, color: '#0f0a1e' }}>{userEmail.split('@')[0]}</p></div>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#0f0a1e' }}>{userEmail.split('@')[0]}</p>
               </button>
               {userMenuOpen && (
                 <div className="user-menu">
-                  <div style={{ padding: '12px 14px', borderBottom: '1px solid #f3f4f6' }}><p style={{ fontSize: 13, fontWeight: 700 }}>{userEmail.split('@')[0]}</p></div>
-                  <div className="menu-item danger" onClick={handleLogout}>Logout</div>
+                  <div style={{ padding: '12px 14px', borderBottom: '1px solid #f3f4f6' }}>
+                    <p style={{ fontSize: 13, fontWeight: 700 }}>{userEmail.split('@')[0]}</p>
+                    <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{userRole}</p>
+                  </div>
+                  <div className="menu-item danger" onClick={handleLogout}>
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                      <polyline points="16 17 21 12 16 7"/>
+                      <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    Logout
+                  </div>
                 </div>
               )}
             </div>
           </header>
 
+          {/* Page content */}
           <main style={{
             flex: 1,
             overflowY: 'auto',

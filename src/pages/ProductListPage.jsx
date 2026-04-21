@@ -156,6 +156,7 @@ const ProductListPage = () => {
     return <span style={{marginLeft:4,fontSize:10,color:'#b91c1c'}}>{sortDir==='asc'?'↑':'↓'}</span>;
   };
 
+  // FIX: Updated to 8 and 7 because of the new 'History' column
   const colCount = isAdmin ? 8 : 7;
 
   return (
@@ -570,8 +571,8 @@ const ProductListPage = () => {
       </div>
 
       {/* ══ MODALS ══ */}
-      <AddProductModal   isOpen={isAddOpen}    onClose={()=>setIsAddOpen(false)}    formData={formData} setFormData={setFormData} onSubmit={handleAddSubmit} />
-      <EditProductModal  isOpen={isEditOpen}   onClose={()=>setIsEditOpen(false)}   formData={formData} setFormData={setFormData} selectedProduct={selectedProduct} onSubmit={handleEditSubmit} />
+      <AddProductModal   isOpen={isAddOpen}    onClose={()=>setIsAddOpen(false)}   formData={formData} setFormData={setFormData} onSubmit={handleAddSubmit} />
+      <EditProductModal  isOpen={isEditOpen}   onClose={()=>setIsEditOpen(false)}  formData={formData} setFormData={setFormData} selectedProduct={selectedProduct} onSubmit={handleEditSubmit} />
       <SoftDeleteDialog  isOpen={isDeleteOpen} onClose={()=>setIsDeleteOpen(false)} selectedProduct={selectedProduct} onSubmit={handleDeleteSubmit} />
 
       {/* ══ TOAST ══ */}
