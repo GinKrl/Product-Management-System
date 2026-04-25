@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useRights } from '../hooks/useRights';
 import { supabase } from '../lib/supabaseClient';
 
-// ── Nav config ────────────────────────────────────────────────
 const NAV_ITEMS = [
   {
     section: 'Main',
@@ -113,7 +112,6 @@ const NAV_ITEMS = [
   },
 ];
 
-// Centralized role check
 const canSee = (allowedRoles, userRole) => {
   if (!allowedRoles) return true;
   if (!userRole) return false;
@@ -132,7 +130,6 @@ const getPageLabel = (pathname) => {
   return map[pathname] ?? 'Dashboard';
 };
 
-// ── AppShell ──────────────────────────────────────────────────
 const AppShell = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen,  setMobileOpen]  = useState(false);
@@ -141,15 +138,15 @@ const AppShell = ({ children }) => {
   const navigate  = useNavigate();
   const location  = useLocation();
   
-  // Destructure both currentUser and loading from Auth
   const { currentUser, loading: loadingAuth } = useAuth();
   const { loadingRights } = useRights(); 
 
   const userEmail    = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
+  
+  // Fixed: Use user_type to match AuthContext and DB
   const userRole     = currentUser?.user_type?.toUpperCase() || 'USER';
 
-  // Combined loading state to prevent UI flicker
   const isSyncing = loadingAuth || loadingRights;
 
   const SIDEBAR_W   = 232;
@@ -206,7 +203,6 @@ const AppShell = ({ children }) => {
       >
         {mobileOpen && <div className="mobile-overlay" onClick={() => setMobileOpen(false)} />}
 
-        {/* ── Sidebar ── */}
         <aside
           className={`shell-sidebar sidebar-scroll ${mobileOpen ? 'mobile-open' : ''}`}
           style={{
@@ -219,7 +215,6 @@ const AppShell = ({ children }) => {
             boxShadow: '2px 0 16px rgba(0,0,0,0.04)',
           }}
         >
-          {/* Logo */}
           <div style={{
             height: NAVBAR_H, display: 'flex', alignItems: 'center', gap: 10,
             padding: sidebarOpen ? '0 18px' : '0',
@@ -245,10 +240,8 @@ const AppShell = ({ children }) => {
             )}
           </div>
 
-          {/* Nav */}
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
-              // Hide whole sections if user doesn't have permissions
               if (!canSee(section.roles, userRole)) return null;
               
               const visibleItems = section.items.filter(item => canSee(item.roles, userRole));
@@ -262,7 +255,6 @@ const AppShell = ({ children }) => {
                     </p>
                   )}
                   {visibleItems.map((item) => {
-                    // Safety check: hide role-gated items while loading is in progress
                     if (isSyncing && item.roles) return null;
 
                     const isActive      = location.pathname === item.href;
@@ -296,7 +288,6 @@ const AppShell = ({ children }) => {
             })}
           </nav>
 
-          {/* User footer */}
           <div style={{ padding: sidebarOpen ? '12px 14px' : '12px 8px', borderTop: '1px solid rgba(0,0,0,0.06)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 12, background: '#f9fafb', border: '1px solid #f3f4f6', justifyContent: sidebarOpen ? 'flex-start' : 'center' }}>
               <div style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, background: 'linear-gradient(135deg,#fef2f2,#fca5a5)', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>{userInitials}</div>
@@ -322,9 +313,7 @@ const AppShell = ({ children }) => {
           </div>
         </aside>
 
-        {/* ── Main content ── */}
         <div className="shell-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-          {/* Navbar */}
           <header style={{
             position: 'absolute', top: 0, left: 0, right: 0,
             height: NAVBAR_H, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
@@ -348,7 +337,6 @@ const AppShell = ({ children }) => {
               </span>
             </div>
 
-            {/* User menu */}
             <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
               <button
                 onClick={() => setUserMenuOpen(o => !o)}

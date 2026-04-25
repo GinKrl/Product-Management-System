@@ -18,16 +18,14 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        // Updated to use 'user_type' based on your SQL schema
         const { data, error } = await supabase
           .from('user')
           .select('user_type, record_status')
-          .eq('id', currentSession.user.id)
+          .eq('id', currentSession.user.id) 
           .maybeSingle();
 
         if (error) throw error;
 
-        // Security check: Block users explicitly set to INACTIVE
         if (data?.record_status === 'INACTIVE') {
           await supabase.auth.signOut();
           alert("Your account is pending administrator approval.");
@@ -37,31 +35,27 @@ export function AuthProvider({ children }) {
 
         setSession(currentSession);
         
-        // Map the database 'user_type' to the 'role' property
-        // This ensures DeletedItemsPage recognizes ADMIN/SUPERADMIN roles
+        // Fixed: Use user_type to match the schema and component checks
         setCurrentUser({
           ...currentSession.user,
-          role: data?.user_type || 'USER' 
+          user_type: data?.user_type || 'USER' 
         });
 
       } catch (err) {
         console.error("Auth Guard Error:", err);
-        // Fallback to basic session info on network error to prevent lockouts
         setSession(currentSession);
-        setCurrentUser(currentSession.user);
+        setCurrentUser({ ...currentSession.user, user_type: 'USER' });
       } finally {
         setLoading(false);
       }
     };
 
-    // Initialize session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleSessionGuard(session);
     });
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         handleSessionGuard(session);
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
