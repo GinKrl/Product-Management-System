@@ -42,10 +42,3 @@ const AddProductModal = ({ isOpen, onClose, onSubmit, formData, setFormData }) =
 };
 
 export default AddProductModal;
-
-
-
-
-
-
-

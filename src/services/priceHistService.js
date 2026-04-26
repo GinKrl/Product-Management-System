@@ -1,16 +1,12 @@
 import { supabase } from '/src/lib/supabaseClient';
 
-/**
- * Fetches price history for a specific product.
- * Requirement: PR-03 PriceHistoryPanel
- */
 export const getPriceHistory = async (prodcode) => {
   try {
     const { data, error } = await supabase
-      .from('pricehist') // FIXED: Matches SQL table name
+      .from('pricehist') 
       .select('*')
       .eq('prodcode', prodcode)
-      .order('effdate', { ascending: false }); // FIXED: Matches SQL column name
+      .order('effDate', { ascending: false }); // FIXED: Matched exact schema casing
 
     if (error) throw error;
     return data;
@@ -20,18 +16,14 @@ export const getPriceHistory = async (prodcode) => {
   }
 };
 
-/**
- * Adds a new price entry.
- * Requirement: PR-03 AddPriceEntryForm
- */
 export const addPriceEntry = async (priceData) => {
   try {
     const { data, error } = await supabase
-      .from('pricehist') // FIXED: Matches SQL table name
+      .from('pricehist') 
       .insert([{
         prodcode: priceData.prodcode,
-        effdate: priceData.effDate,     // Maps UI state (effDate) to DB column (effdate)
-        unitprice: parseFloat(priceData.unitPrice) // Maps UI state (unitPrice) to DB column (unitprice)
+        effDate: priceData.effDate,     // FIXED: Matched exact schema casing
+        unitPrice: parseFloat(priceData.unitPrice) // FIXED: Matched exact schema casing
       }])
       .select();
 

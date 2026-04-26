@@ -1,10 +1,14 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useRightsContext } from '../contexts/UserRightsContext';
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { session, currentUser, loading } = useAuth();
+// Added 'requiredRight' to the props
+const ProtectedRoute = ({ children, allowedRoles, requiredRight }) => {
+  const { session, loading: authLoading } = useAuth();
+  const { userRole, rights, loadingRights } = useRightsContext();
 
-  if (loading) {
+  // 1. Wait for everything to load. 
+  if (authLoading || loadingRights) {
     return (
       <div style={{
         display: 'flex', height: '100vh',
@@ -12,27 +16,41 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
         background: '#fff', fontFamily: "'DM Sans', sans-serif",
       }}>
         <div style={{ color: '#b91c1c', fontWeight: 600, fontSize: 14 }}>
-          Checking security...
+          Verifying Permissions...
         </div>
       </div>
     );
   }
 
+  // 2. No session? Kick to login.
   if (!session) {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && allowedRoles.length > 0) {
-    // Fixed: Now correctly looks for user_type instead of role
-    const userRole = currentUser?.user_type?.toUpperCase();
+  const currentRole = userRole?.toUpperCase();
 
-    if (!userRole) {
-      return null; 
+  // 3. Right Check (Sprint 3 Requirement)
+  // FIXED: Accesses the object property directly instead of treating it like an array
+  if (requiredRight) {
+    const hasRight = rights[requiredRight] === 1;
+    
+    if (!hasRight && currentRole !== 'SUPERADMIN') {
+      console.warn(`Access Denied: Missing right ${requiredRight}`);
+      return <Navigate to="/products" replace />;
+    }
+  }
+
+  // 4. Role Check
+  if (allowedRoles && allowedRoles.length > 0) {
+    if (!currentRole) {
+       console.error("Access Denied: No role found in database.");
+       return <Navigate to="/login" replace />;
     }
 
-    const hasAccess = allowedRoles.some(r => r.toUpperCase() === userRole);
+    const hasAccess = allowedRoles.map(r => r.toUpperCase()).includes(currentRole);
     
     if (!hasAccess) {
+      console.warn(`Access Denied for ${currentRole}. Required: ${allowedRoles}`);
       return <Navigate to="/products" replace />;
     }
   }
