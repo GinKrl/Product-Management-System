@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getProducts, recoverProduct } from '../services/productService';
 import { useAuth } from '../contexts/AuthContext';
+// Added the import for the database rights context
+import { useRightsContext } from '../contexts/UserRightsContext';
 
 const DeletedItemsPage = () => {
   const { currentUser } = useAuth();
+  // Pull the actual database-synced role
+  const { userRole: dbRole } = useRightsContext();
+
   const [deletedProducts, setDeletedProducts] = useState([]);
   const [isLoading, setIsLoading]             = useState(true);
   const [search, setSearch]                   = useState('');
@@ -12,8 +17,8 @@ const DeletedItemsPage = () => {
   const [sortCol, setSortCol]                 = useState(null);
   const [sortDir, setSortDir]                 = useState('asc');
 
-  // Logic: Check if user is Admin or Superadmin based on the AuthContext mapping
-  const userRole = currentUser?.role?.toUpperCase();
+  // Logic: Check if user is Admin or Superadmin based on the DATABASE role
+  const userRole = dbRole?.toUpperCase();
   const isAdmin = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
 
   const showToast = (msg, type = 'success') => {
@@ -77,7 +82,7 @@ const DeletedItemsPage = () => {
         <h2 style={{ fontFamily: 'DM Serif Display', fontSize: '32px' }}>Access Denied</h2>
         <p style={{ color: '#9ca3af' }}>You do not have the required permissions to view this archive.</p>
         <div style={{ marginTop: '20px', fontSize: '11px', fontWeight: 700, color: '#b91c1c' }}>
-          DETECTED ROLE: {currentUser?.role || 'authenticated'}
+          DETECTED ROLE: {userRole || 'authenticated'}
         </div>
       </div>
     );
@@ -233,7 +238,7 @@ const DeletedItemsPage = () => {
         .toast-wrap { position:fixed;bottom:28px;right:28px;z-index:200;animation:toastIn .25s ease; }
         .toast { display:flex;align-items:center;gap:10px;padding:13px 18px;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,.14);backdrop-filter:blur(8px);min-width:240px; }
         .toast.t-success { background:#fff;border:1px solid #bbf7d0;color:var(--green-text); }
-        .toast.t-error   { background:#fff;border:1px solid #fecaca;color:#dc2626; }
+        .toast.t-error    { background:#fff;border:1px solid #fecaca;color:#dc2626; }
         .toast-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
         .toast.t-success .toast-dot { background:var(--green-text); }
         .toast.t-error   .toast-dot { background:#dc2626; }

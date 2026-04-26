@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useRights } from '../hooks/useRights';
+import { useRightsContext } from '../contexts/UserRightsContext'; // Updated Import
 import { supabase } from '../lib/supabaseClient';
 
 const NAV_ITEMS = [
@@ -139,13 +139,14 @@ const AppShell = ({ children }) => {
   const location  = useLocation();
   
   const { currentUser, loading: loadingAuth } = useAuth();
-  const { loadingRights } = useRights(); 
+  // FIX: Pull userRole from RightsContext for better stability
+  const { userRole, loadingRights } = useRightsContext(); 
 
   const userEmail    = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
   
-  // Fixed: Use user_type to match AuthContext and DB
-  const userRole     = currentUser?.user_type?.toUpperCase() || 'USER';
+  // Use the role from the dedicated rights context
+  const currentRole = userRole?.toUpperCase() || 'USER';
 
   const isSyncing = loadingAuth || loadingRights;
 
@@ -242,9 +243,9 @@ const AppShell = ({ children }) => {
 
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
-              if (!canSee(section.roles, userRole)) return null;
+              if (!canSee(section.roles, currentRole)) return null;
               
-              const visibleItems = section.items.filter(item => canSee(item.roles, userRole));
+              const visibleItems = section.items.filter(item => canSee(item.roles, currentRole));
               if (visibleItems.length === 0) return null;
 
               return (
@@ -294,7 +295,7 @@ const AppShell = ({ children }) => {
               {sidebarOpen && (
                 <div style={{ overflow: 'hidden', minWidth: 0, flex: 1 }}>
                   <p style={{ fontSize: 12, fontWeight: 700, color: '#0f0a1e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userEmail.split('@')[0]}</p>
-                  <p style={{ fontSize: 10, color: '#9ca3af', textTransform: 'uppercase' }}>{isSyncing ? '...' : userRole}</p>
+                  <p style={{ fontSize: 10, color: '#9ca3af', textTransform: 'uppercase' }}>{isSyncing ? '...' : currentRole}</p>
                 </div>
               )}
             </div>
@@ -349,7 +350,7 @@ const AppShell = ({ children }) => {
                 <div className="user-menu">
                   <div style={{ padding: '12px 14px', borderBottom: '1px solid #f3f4f6' }}>
                     <p style={{ fontSize: 13, fontWeight: 700 }}>{userEmail.split('@')[0]}</p>
-                    <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{userRole}</p>
+                    <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{currentRole}</p>
                   </div>
                   <div className="menu-item danger" onClick={handleLogout}>
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
