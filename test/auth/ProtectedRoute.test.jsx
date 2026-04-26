@@ -4,11 +4,17 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import * as supabaseModule from '../../src/lib/supabaseClient';
 import ProtectedRoute from '../../src/components/ProtectedRoute.jsx';
 import { AuthProvider, useAuth } from '../../src/contexts/AuthContext.jsx';
+import { useRightsContext } from '../../src/contexts/UserRightsContext.jsx';
 
 vi.mock('../../src/contexts/AuthContext.jsx', () => ({
   AuthProvider: ({ children }) => <div>{children}</div>,
   useAuth: vi.fn(),
-})); 
+}));
+
+vi.mock('../../src/contexts/UserRightsContext.jsx', () => ({
+  UserRightsProvider: ({ children }) => <div>{children}</div>,
+  useRightsContext: vi.fn(),
+}));
 
 const TestDashboard = () => <div data-testid="dashboard-content">Dashboard Content</div>;
 
@@ -43,12 +49,22 @@ describe('ProtectedRoute Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useAuth).mockReturnValue({ session: null, loading: false });
+    vi.mocked(useRightsContext).mockReturnValue({
+      rights: {},
+      userRole: 'USER',
+      loadingRights: false,
+    });
   });
 
   it('shows loading screen while loading', () => {
     vi.mocked(useAuth).mockReturnValue({ session: null, loading: true });
+    vi.mocked(useRightsContext).mockReturnValue({
+      rights: {},
+      userRole: 'USER',
+      loadingRights: true,
+    });
     renderProtected();
-    expect(screen.getByText('Checking security...')).toBeInTheDocument();
+    expect(screen.getByText('Verifying Permissions...')).toBeInTheDocument();
   });
 
   it('redirects to /login if no session', () => {
