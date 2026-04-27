@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useRightsContext } from '../contexts/UserRightsContext'; // Updated Import
+import { useRightsContext } from '../contexts/UserRightsContext';
 import { supabase } from '../lib/supabaseClient';
 
 const NAV_ITEMS = [
@@ -44,7 +44,7 @@ const NAV_ITEMS = [
       {
         label: 'Deleted Items',
         href: '/deleted-items',
-        roles: ['ADMIN', 'SUPERADMIN'], 
+        roles: ['ADMIN', 'SUPERADMIN'],
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <polyline points="3 6 5 6 21 6" />
@@ -62,7 +62,8 @@ const NAV_ITEMS = [
     items: [
       {
         label: 'Reports',
-        href: '#',
+        href: '/reports/products',
+        requiredRight: 'REP_001',
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <path d="M18 20V10M12 20V4M6 20v-6" />
@@ -71,8 +72,8 @@ const NAV_ITEMS = [
       },
       {
         label: 'Insights',
-        href: '#',
-        roles: ['ADMIN', 'MANAGER'],
+        href: '/reports/top-selling',
+        requiredRight: 'REP_002',
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <circle cx="12" cy="12" r="9" />
@@ -86,6 +87,17 @@ const NAV_ITEMS = [
     section: 'Settings',
     roles: ['ADMIN', 'SUPERADMIN'],
     items: [
+      {
+        label: 'Admin',
+        href: '/admin/users',
+        requiredRight: 'ADM_USER',
+        icon: (
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+          </svg>
+        ),
+      },
       {
         label: 'Team',
         href: '#',
@@ -118,14 +130,18 @@ const canSee = (allowedRoles, userRole) => {
   return allowedRoles.some(r => r.toUpperCase() === userRole.toUpperCase());
 };
 
+const canSeeByRight = (requiredRight, rights) => {
+  if (!requiredRight) return true;
+  return rights[requiredRight] === 1;
+};
+
 const getPageLabel = (pathname) => {
   const map = {
-    '/products':      'Products',
-    '/deleted-items': 'Deleted Items',
-    '/orders':        'Orders',
-    '/customers':     'Customers',
-    '/reports':       'Reports',
-    '/insights':      'Insights',
+    '/products':            'Products',
+    '/deleted-items':       'Deleted Items',
+    '/reports/products':    'Reports',
+    '/reports/top-selling': 'Insights',
+    '/admin/users':         'Admin',
   };
   return map[pathname] ?? 'Dashboard';
 };
@@ -137,23 +153,20 @@ const AppShell = ({ children }) => {
 
   const navigate  = useNavigate();
   const location  = useLocation();
-  
+
   const { currentUser, loading: loadingAuth } = useAuth();
-  // FIX: Pull userRole from RightsContext for better stability
-  const { userRole, loadingRights } = useRightsContext(); 
+  const { userRole, rights, loadingRights } = useRightsContext();
 
   const userEmail    = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
-  
-  // Use the role from the dedicated rights context
-  const currentRole = userRole?.toUpperCase() || 'USER';
 
+  const currentRole = userRole?.toUpperCase() || 'USER';
   const isSyncing = loadingAuth || loadingRights;
 
   const SIDEBAR_W   = 232;
   const COLLAPSED_W = 64;
   const NAVBAR_H    = 56;
-  const effectiveW = sidebarOpen ? SIDEBAR_W : COLLAPSED_W;
+  const effectiveW  = sidebarOpen ? SIDEBAR_W : COLLAPSED_W;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -244,8 +257,11 @@ const AppShell = ({ children }) => {
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
               if (!canSee(section.roles, currentRole)) return null;
-              
-              const visibleItems = section.items.filter(item => canSee(item.roles, currentRole));
+
+              const visibleItems = section.items.filter(item =>
+                canSee(item.roles, currentRole) &&
+                canSeeByRight(item.requiredRight, rights)
+              );
               if (visibleItems.length === 0) return null;
 
               return (
@@ -256,9 +272,9 @@ const AppShell = ({ children }) => {
                     </p>
                   )}
                   {visibleItems.map((item) => {
-                    if (isSyncing && item.roles) return null;
+                    if (isSyncing && (item.roles || item.requiredRight)) return null;
 
-                    const isActive      = location.pathname === item.href;
+                    const isActive       = location.pathname === item.href;
                     const isDeletedItems = item.href === '/deleted-items';
                     return (
                       <a
