@@ -1,46 +1,38 @@
 import { supabase } from '../lib/supabaseClient';
-
+import { makeStamp } from '../utils/stampHelper';
 
 /**
- * Fetches products based on user type.
- * USER accounts only see ACTIVE records. ADMIN/SUPERADMIN see all records.
+ * Fetches products based on user type, merged with latest price from pricehist.
  */
 export const getProducts = async (userType) => {
   try {
-    // 1. Fetch all product details so descriptions and units show up properly
     let query = supabase.from('product').select('*');
+
+    // USER only sees ACTIVE; ADMIN/SUPERADMIN see all
     if (userType === 'USER') {
       query = query.eq('record_status', 'ACTIVE');
     }
-    const { data: products, error: productError } = await query;
+
+    const { data: products, error: productError } = await query.order('prodcode');
     if (productError) throw productError;
 
-
-    // 2. Fetch the price history table to get the actual prices
     const { data: priceHistory, error: priceError } = await supabase
       .from('pricehist')
       .select('*');
     if (priceError) throw priceError;
 
-
-    // 3. Stitch the data together so the frontend gets BOTH descriptions AND prices
     const mergedData = products.map(product => {
-      // Find all prices associated with this specific product code
       const productPrices = priceHistory.filter(ph => ph.prodcode === product.prodcode);
-     
-      // Sort them by date (newest first) to ensure we grab the current active price
+      // FIX: columns are lowercase 'effdate' and 'unitprice' — matches actual DB
       productPrices.sort((a, b) => new Date(b.effdate) - new Date(a.effdate));
-     
       const latestPrice = productPrices.length > 0 ? productPrices[0].unitprice : 0;
-
-
       return {
         ...product,
-        price: latestPrice,          // Maps to UI tables expecting .price
-        current_price: latestPrice   // Maps to UI forms expecting .current_price
+        price: latestPrice,
+        current_price: latestPrice,
+        record_status: product.record_status,
       };
     });
-
 
     return mergedData;
   } catch (error) {
@@ -49,93 +41,132 @@ export const getProducts = async (userType) => {
   }
 };
 
-
-export const addProduct = async (productData) => {
+/**
+ * Fetches only INACTIVE products for the Deleted Items panel.
+ */
+export const getInactiveProducts = async () => {
   try {
-    console.log("Raw payload received from form:", productData);
-
-
-    // 1. Safely extract all variables, ensuring we catch the right keys
-    const code = productData.prodcode || productData.code;
-    const description = productData.description;
-    const unit = productData.unit;
-   
-    // Safely extract price, and strip out any accidental commas or string characters
-    const rawPrice = productData.current_price || productData.price || 0;
-    const cleanPrice = parseFloat(rawPrice.toString().replace(/,/g, ''));
-
-
-    // 2. Insert into the 'product' table
-    const { data: newProduct, error: productError } = await supabase
+    const { data: products, error: productError } = await supabase
       .from('product')
-      .insert([{
-        prodcode: code,
-        description: description,
-        unit: unit,
-        record_status: 'ACTIVE'
-      }])
-      .select();
+      .select('*')
+      .eq('record_status', 'INACTIVE')
+      .order('prodcode');
 
-
-    if (productError) {
-      console.error("Product Table Insert Error:", productError);
-      throw productError;
-    }
-
-
-    // 3. Insert into the 'pricehist' table
-    const currentDate = new Date().toISOString().split('T')[0]; // Formats safely to YYYY-MM-DD
-   
-    const { error: priceError } = await supabase
-      .from('pricehist')
-      .insert([{
-        prodcode: code,
-        unitprice: cleanPrice,
-        effdate: currentDate,    
-        record_status: 'ACTIVE'
-      }]);
-
-
-    if (priceError) {
-      console.error("Price History Insert Error:", priceError);
-      throw priceError;
-    }
-
-
-    return newProduct;
+    if (productError) throw productError;
+    return products;
   } catch (error) {
-    console.error('Final Error adding product:', error);
+    console.error('Error fetching inactive products:', error.message);
     throw error;
   }
 };
 
-
-export const updateProduct = async (prodcode, productData) => {
+/**
+ * Adds a new product and inserts its initial price into pricehist.
+ */
+export const addProduct = async (productData, userId) => {
   try {
-    const { data, error } = await supabase
+    const code       = productData.prodcode || productData.code;
+    const rawPrice   = productData.current_price || productData.price || 0;
+    const cleanPrice = parseFloat(rawPrice.toString().replace(/,/g, ''));
+
+    // FIX: use makeStamp for proper audit format
+    const stamp = makeStamp('ADDED', userId);
+
+    const { data: newProduct, error: productError } = await supabase
       .from('product')
-      .update(productData)
+      .insert([{
+        prodcode:      code,
+        description:   productData.description,
+        unit:          productData.unit,
+        record_status: 'ACTIVE',
+        stamp,
+      }])
+      .select();
+
+    if (productError) throw productError;
+
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // FIX: columns are lowercase — matches actual DB
+    // pricehist DOES have record_status and stamp columns — confirmed from DB screenshot
+    const { error: priceError } = await supabase
+      .from('pricehist')
+      .insert([{
+        prodcode:      code,
+        unitprice:     cleanPrice,
+        effdate:       currentDate,
+        record_status: 'ACTIVE',
+        stamp,
+      }]);
+
+    if (priceError) throw priceError;
+    return newProduct;
+  } catch (error) {
+    console.error('Error in addProduct:', error);
+    throw error;
+  }
+};
+
+/**
+ * Updates a product and upserts a new price entry.
+ */
+export const updateProduct = async (prodcode, productData, userId) => {
+  try {
+    const rawPrice   = productData.current_price !== undefined
+      ? productData.current_price
+      : productData.price;
+    const cleanPrice = parseFloat(rawPrice.toString().replace(/,/g, ''));
+
+    // FIX: use makeStamp for proper audit format
+    const stamp = makeStamp('EDITED', userId);
+
+    const { data: updatedProduct, error: productError } = await supabase
+      .from('product')
+      .update({
+        description: productData.description,
+        unit:        productData.unit,
+        stamp,
+      })
       .eq('prodcode', prodcode)
       .select();
 
+    if (productError) throw productError;
 
-    if (error) throw error;
-    return data;
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // FIX: lowercase column names + correct onConflict key
+    const { error: priceError } = await supabase
+      .from('pricehist')
+      .upsert([{
+        prodcode:      prodcode,
+        unitprice:     cleanPrice,
+        effdate:       currentDate,
+        record_status: 'ACTIVE',
+        stamp,
+      }], { onConflict: 'prodcode,effdate' });
+
+    if (priceError) throw priceError;
+    return updatedProduct;
   } catch (error) {
     console.error(`Error updating product ${prodcode}:`, error.message);
     throw error;
   }
 };
 
-
-export const softDeleteProduct = async (prodcode) => {
+/**
+ * Soft deletes a product by setting record_status to INACTIVE.
+ */
+export const softDeleteProduct = async (prodcode, userId) => {
   try {
     const { data, error } = await supabase
       .from('product')
-      .update({ record_status: 'INACTIVE' })
+      .update({
+        record_status: 'INACTIVE',
+        // FIX: use makeStamp for proper audit format
+        stamp: makeStamp('DEACTIVATED', userId),
+      })
       .eq('prodcode', prodcode)
       .select();
-
 
     if (error) throw error;
     return data;
@@ -145,15 +176,20 @@ export const softDeleteProduct = async (prodcode) => {
   }
 };
 
-
-export const recoverProduct = async (prodcode) => {
+/**
+ * Recovers a soft-deleted product back to ACTIVE.
+ */
+export const recoverProduct = async (prodcode, userId) => {
   try {
     const { data, error } = await supabase
       .from('product')
-      .update({ record_status: 'ACTIVE' })
+      .update({
+        record_status: 'ACTIVE',
+        // FIX: use makeStamp for proper audit format
+        stamp: makeStamp('REACTIVATED', userId),
+      })
       .eq('prodcode', prodcode)
       .select();
-
 
     if (error) throw error;
     return data;
@@ -162,4 +198,3 @@ export const recoverProduct = async (prodcode) => {
     throw error;
   }
 };
-
