@@ -1,4 +1,3 @@
-// src/services/productService.js
 import { supabase } from '../lib/supabaseClient';
 import { makeStamp } from '../utils/stampHelper';
 

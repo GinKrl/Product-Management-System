@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useRightsContext } from '../contexts/UserRightsContext'; // Updated Import
+import { useRightsContext } from '../contexts/UserRightsContext';
 import { supabase } from '../lib/supabaseClient';
 
 const NAV_ITEMS = [
@@ -44,7 +44,7 @@ const NAV_ITEMS = [
       {
         label: 'Deleted Items',
         href: '/deleted-items',
-        roles: ['ADMIN', 'SUPERADMIN'], 
+        roles: ['ADMIN', 'SUPERADMIN'],
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <polyline points="3 6 5 6 21 6" />
@@ -61,11 +61,31 @@ const NAV_ITEMS = [
     section: 'Analytics',
     items: [
       {
-        label: 'Reports',
-        href: '#',
+        label: 'Product Report',
+        href: '/reports/products',
+        // FIX: was roles: ['ADMIN','SUPERADMIN'] — must gate by REP_001 right
+        // USER also has REP_001=1 so role-gating was wrong
+        // requiredRight is handled by ProtectedRoute; here we just show/hide in nav
+        requiredRight: 'REP_001',
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
-            <path d="M18 20V10M12 20V4M6 20v-6" />
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <line x1="10" y1="9" x2="8" y2="9"/>
+          </svg>
+        ),
+      },
+      {
+        label: 'Top Selling',
+        href: '/reports/top-selling',
+        // FIX: was roles: ['ADMIN','SUPERADMIN'] — must gate by REP_002 right
+        // REP_002=1 only for SUPERADMIN per rights matrix
+        requiredRight: 'REP_002',
+        icon: (
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
+            <path d="M18 20V10M12 20V4M6 20v-6"/>
           </svg>
         ),
       },
@@ -112,7 +132,9 @@ const NAV_ITEMS = [
   },
 ];
 
-const canSee = (allowedRoles, userRole) => {
+// FIX: updated canSee to also handle requiredRight using rights from context
+// This is called inside the component where rights is available
+const canSeeByRole = (allowedRoles, userRole) => {
   if (!allowedRoles) return true;
   if (!userRole) return false;
   return allowedRoles.some(r => r.toUpperCase() === userRole.toUpperCase());
@@ -120,40 +142,38 @@ const canSee = (allowedRoles, userRole) => {
 
 const getPageLabel = (pathname) => {
   const map = {
-    '/products':      'Products',
-    '/deleted-items': 'Deleted Items',
-    '/orders':        'Orders',
-    '/customers':     'Customers',
-    '/reports':       'Reports',
-    '/insights':      'Insights',
+    '/products':            'Products',
+    '/deleted-items':       'Deleted Items',
+    '/reports/products':    'Product Report',
+    '/reports/top-selling': 'Top Selling',
+    '/admin/users':         'User Management',
+    '/orders':              'Orders',
+    '/customers':           'Customers',
+    '/insights':            'Insights',
   };
   return map[pathname] ?? 'Dashboard';
 };
 
 const AppShell = ({ children }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileOpen,  setMobileOpen]  = useState(false);
+  const [sidebarOpen, setSidebarOpen]   = useState(true);
+  const [mobileOpen, setMobileOpen]     = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const navigate  = useNavigate();
-  const location  = useLocation();
-  
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const { currentUser, loading: loadingAuth } = useAuth();
-  // FIX: Pull userRole from RightsContext for better stability
-  const { userRole, loadingRights } = useRightsContext(); 
+  const { userRole, rights, loadingRights }   = useRightsContext();
 
   const userEmail    = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
-  
-  // Use the role from the dedicated rights context
-  const currentRole = userRole?.toUpperCase() || 'USER';
-
-  const isSyncing = loadingAuth || loadingRights;
+  const currentRole  = userRole?.toUpperCase() || 'USER';
+  const isSyncing    = loadingAuth || loadingRights;
 
   const SIDEBAR_W   = 232;
   const COLLAPSED_W = 64;
   const NAVBAR_H    = 56;
-  const effectiveW = sidebarOpen ? SIDEBAR_W : COLLAPSED_W;
+  const effectiveW  = sidebarOpen ? SIDEBAR_W : COLLAPSED_W;
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -163,6 +183,23 @@ const AppShell = ({ children }) => {
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) setMobileOpen(o => !o);
     else setSidebarOpen(s => !s);
+  };
+
+  const AMBER_ROUTES = new Set(['/deleted-items']);
+  const BLUE_ROUTES  = new Set(['/reports/products', '/reports/top-selling']);
+
+  const getActiveStyle = (href) => {
+    if (AMBER_ROUTES.has(href)) return { bg: 'linear-gradient(90deg,#fffbeb,#fef3c7)', color: '#b45309', border: '#f59e0b' };
+    if (BLUE_ROUTES.has(href))  return { bg: 'linear-gradient(90deg,#eff6ff,#dbeafe)', color: '#1d4ed8', border: '#3b82f6' };
+    return { bg: 'linear-gradient(90deg,#fef2f2,#fee2e2)', color: '#b91c1c', border: '#b91c1c' };
+  };
+
+  // FIX: canSee now checks both roles AND requiredRight
+  const canSeeItem = (item) => {
+    if (item.requiredRight) {
+      return rights[item.requiredRight] === 1;
+    }
+    return canSeeByRole(item.roles, currentRole);
   };
 
   return (
@@ -194,8 +231,6 @@ const AppShell = ({ children }) => {
         }
         .sidebar-scroll::-webkit-scrollbar { width: 4px; }
         .sidebar-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
-        .nav-item.active-deleted { background: linear-gradient(90deg,#fffbeb,#fef3c7) !important; color: #b45309 !important; border-left: 3px solid #f59e0b !important; }
-        .nav-item.active-deleted svg { color: #b45309; }
       `}</style>
 
       <div
@@ -206,28 +241,11 @@ const AppShell = ({ children }) => {
 
         <aside
           className={`shell-sidebar sidebar-scroll ${mobileOpen ? 'mobile-open' : ''}`}
-          style={{
-            width: effectiveW,
-            background: '#fff',
-            borderRight: '1px solid rgba(0,0,0,0.07)',
-            display: 'flex', flexDirection: 'column',
-            flexShrink: 0, height: '100vh',
-            overflowY: 'auto', overflowX: 'hidden',
-            boxShadow: '2px 0 16px rgba(0,0,0,0.04)',
-          }}
+          style={{ width: effectiveW, background: '#fff', borderRight: '1px solid rgba(0,0,0,0.07)', display: 'flex', flexDirection: 'column', flexShrink: 0, height: '100vh', overflowY: 'auto', overflowX: 'hidden', boxShadow: '2px 0 16px rgba(0,0,0,0.04)' }}
         >
-          <div style={{
-            height: NAVBAR_H, display: 'flex', alignItems: 'center', gap: 10,
-            padding: sidebarOpen ? '0 18px' : '0',
-            justifyContent: sidebarOpen ? 'flex-start' : 'center',
-            borderBottom: '1px solid rgba(0,0,0,0.06)', flexShrink: 0,
-          }}>
-            <div style={{
-              width: 30, height: 30, borderRadius: 9, flexShrink: 0,
-              background: 'linear-gradient(135deg,#7f1d1d,#b91c1c 55%,#e11d48)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 3px 10px rgba(185,28,28,0.35)',
-            }}>
+          {/* Brand */}
+          <div style={{ height: NAVBAR_H, display: 'flex', alignItems: 'center', gap: 10, padding: sidebarOpen ? '0 18px' : '0', justifyContent: sidebarOpen ? 'flex-start' : 'center', borderBottom: '1px solid rgba(0,0,0,0.06)', flexShrink: 0 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, background: 'linear-gradient(135deg,#7f1d1d,#b91c1c 55%,#e11d48)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(185,28,28,0.35)' }}>
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth="2.4">
                 <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/>
                 <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/>
@@ -241,13 +259,13 @@ const AppShell = ({ children }) => {
             )}
           </div>
 
+          {/* Nav */}
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
-              if (!canSee(section.roles, currentRole)) return null;
-              
-              const visibleItems = section.items.filter(item => canSee(item.roles, currentRole));
+              if (!canSeeByRole(section.roles, currentRole)) return null;
+              // FIX: use canSeeItem which checks both roles and requiredRight
+              const visibleItems = section.items.filter(item => canSeeItem(item));
               if (visibleItems.length === 0) return null;
-
               return (
                 <div key={section.section} style={{ marginBottom: 4 }}>
                   {sidebarOpen && (
@@ -256,25 +274,23 @@ const AppShell = ({ children }) => {
                     </p>
                   )}
                   {visibleItems.map((item) => {
-                    if (isSyncing && item.roles) return null;
-
-                    const isActive      = location.pathname === item.href;
-                    const isDeletedItems = item.href === '/deleted-items';
+                    if (isSyncing && (item.roles || item.requiredRight)) return null;
+                    const isActive = location.pathname === item.href;
+                    const style    = getActiveStyle(item.href);
                     return (
                       <a
                         key={item.label}
                         href={item.href}
                         onClick={(e) => { e.preventDefault(); navigate(item.href); }}
-                        className={`nav-item${isActive ? (isDeletedItems ? ' active-deleted' : ' active') : ''}`}
+                        className="nav-item"
                         style={{
                           display: 'flex', alignItems: 'center', gap: 10,
                           padding: sidebarOpen ? '9px 18px' : '10px 0',
                           justifyContent: sidebarOpen ? 'flex-start' : 'center',
                           fontSize: 13, fontWeight: isActive ? 700 : 500,
-                          color: isActive ? (isDeletedItems ? '#b45309' : '#b91c1c') : '#4b5563',
-                          borderLeft: isActive
-                            ? `3px solid ${isDeletedItems ? '#f59e0b' : '#b91c1c'}`
-                            : '3px solid transparent',
+                          color: isActive ? style.color : '#4b5563',
+                          background: isActive ? style.bg : 'transparent',
+                          borderLeft: isActive ? `3px solid ${style.border}` : '3px solid transparent',
                           borderRadius: '0 8px 8px 0',
                           margin: '1px 10px 1px 0',
                         }}
@@ -289,6 +305,7 @@ const AppShell = ({ children }) => {
             })}
           </nav>
 
+          {/* User footer */}
           <div style={{ padding: sidebarOpen ? '12px 14px' : '12px 8px', borderTop: '1px solid rgba(0,0,0,0.06)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 12, background: '#f9fafb', border: '1px solid #f3f4f6', justifyContent: sidebarOpen ? 'flex-start' : 'center' }}>
               <div style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, background: 'linear-gradient(135deg,#fef2f2,#fca5a5)', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>{userInitials}</div>
@@ -299,50 +316,26 @@ const AppShell = ({ children }) => {
                 </div>
               )}
             </div>
-            <button
-              className="logout-btn"
-              onClick={handleLogout}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: sidebarOpen ? 'flex-start' : 'center', width: '100%', padding: sidebarOpen ? '8px 12px' : '8px 0', borderRadius: 10, border: '1px solid #e5e7eb', background: 'transparent', color: '#6b7280', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}
-            >
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
+            <button className="logout-btn" onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: sidebarOpen ? 'flex-start' : 'center', width: '100%', padding: sidebarOpen ? '8px 12px' : '8px 0', borderRadius: 10, border: '1px solid #e5e7eb', background: 'transparent', color: '#6b7280', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
               {sidebarOpen && <span>Logout</span>}
             </button>
           </div>
         </aside>
 
+        {/* Main */}
         <div className="shell-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-          <header style={{
-            position: 'absolute', top: 0, left: 0, right: 0,
-            height: NAVBAR_H, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
-            borderBottom: '1px solid rgba(0,0,0,0.07)', display: 'flex', alignItems: 'center',
-            padding: '0 24px', gap: 12, flexShrink: 0, zIndex: 50,
-            boxShadow: '0 1px 8px rgba(0,0,0,0.04)',
-          }}>
+          <header style={{ position: 'absolute', top: 0, left: 0, right: 0, height: NAVBAR_H, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(0,0,0,0.07)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 12, flexShrink: 0, zIndex: 50, boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}>
             <button className="nb-icon-btn" onClick={toggleSidebar} style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', color: '#9ca3af' }}>
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
             </button>
-
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
               <span style={{ fontSize: 11, color: '#d1d5db' }}>HOPE, INC.</span>
               <span style={{ fontSize: 11, color: '#e5e7eb' }}>/</span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>
-                {getPageLabel(location.pathname)}
-              </span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#6b7280' }}>{getPageLabel(location.pathname)}</span>
             </div>
-
             <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
-              <button
-                onClick={() => setUserMenuOpen(o => !o)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px 5px 6px', borderRadius: 10, border: `1px solid ${userMenuOpen ? '#fca5a5' : '#e5e7eb'}`, background: userMenuOpen ? '#fef2f2' : '#fff', cursor: 'pointer' }}
-              >
+              <button onClick={() => setUserMenuOpen(o => !o)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px 5px 6px', borderRadius: 10, border: `1px solid ${userMenuOpen ? '#fca5a5' : '#e5e7eb'}`, background: userMenuOpen ? '#fef2f2' : '#fff', cursor: 'pointer' }}>
                 <div style={{ width: 26, height: 26, borderRadius: 8, background: 'linear-gradient(135deg,#fef2f2,#fca5a5)', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>{userInitials}</div>
                 <p style={{ fontSize: 12, fontWeight: 700, color: '#0f0a1e' }}>{userEmail.split('@')[0]}</p>
               </button>
@@ -353,27 +346,15 @@ const AppShell = ({ children }) => {
                     <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{currentRole}</p>
                   </div>
                   <div className="menu-item danger" onClick={handleLogout}>
-                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
-                      <polyline points="16 17 21 12 16 7"/>
-                      <line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     Logout
                   </div>
                 </div>
               )}
             </div>
           </header>
-
-          <main style={{
-            flex: 1,
-            overflowY: 'auto',
-            background: 'linear-gradient(160deg,#f8f9fc 0%,#f0f2f5 100%)',
-            paddingTop: NAVBAR_H,
-          }}>
-            <div style={{ padding: '32px 24px' }}>
-              {children}
-            </div>
+          <main style={{ flex: 1, overflowY: 'auto', background: 'linear-gradient(160deg,#f8f9fc 0%,#f0f2f5 100%)', paddingTop: NAVBAR_H }}>
+            <div style={{ padding: '32px 24px' }}>{children}</div>
           </main>
         </div>
       </div>
