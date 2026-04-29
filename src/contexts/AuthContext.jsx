@@ -1,3 +1,4 @@
+// src/contexts/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
@@ -18,23 +19,17 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        // 1. Log the ID we are looking for so you can compare it to your database
-        console.log("Checking DB for UID:", currentSession.user.id);
-        
+        // FIX: column is 'id' not 'userid' in the user table
         const { data, error } = await supabase
           .from('user')
           .select('user_type, record_status')
-          .eq('id', currentSession.user.id) 
+          .eq('id', currentSession.user.id)
           .maybeSingle();
-
-        // 2. Log what the database actually returned
-        console.log("DB Result:", data, "Error:", error);
 
         if (error) throw error;
 
-        // 3. Only kick the user out if the DB explicitly says they are INACTIVE
+        // Block INACTIVE accounts
         if (data?.record_status === 'INACTIVE') {
-          console.warn("Account is inactive. Signing out.");
           await supabase.auth.signOut();
           setCurrentUser(null);
           setSession(null);
@@ -42,22 +37,26 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        // 4. If !data, RLS might be blocking the read, but we will let you in to debug
+        // Block users with no DB row (not yet provisioned)
         if (!data) {
-          console.warn("No user row found! RLS might be blocking the read, or the ID is wrong.");
+          await supabase.auth.signOut();
+          setCurrentUser(null);
+          setSession(null);
+          setLoading(false);
+          return;
         }
 
         setSession(currentSession);
         setCurrentUser({
           ...currentSession.user,
-          user_type: data?.user_type || 'USER' 
+          user_type: data.user_type,
         });
 
       } catch (err) {
-        console.error("Auth Guard Error:", err);
-        // Fallback: don't loop, just let them in as a basic user so the app doesn't break
-        setSession(currentSession);
-        setCurrentUser({ ...currentSession.user, user_type: 'USER' });
+        // On error, sign out to be safe
+        await supabase.auth.signOut();
+        setCurrentUser(null);
+        setSession(null);
       } finally {
         setLoading(false);
       }
@@ -68,7 +67,7 @@ export function AuthProvider({ children }) {
       handleSessionGuard(session);
     });
 
-    // Listen for login/logout events
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         handleSessionGuard(session);

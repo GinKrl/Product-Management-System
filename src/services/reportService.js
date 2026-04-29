@@ -1,11 +1,14 @@
+// src/services/reportService.js
 import { supabase } from "../lib/supabaseClient";
 
 /**
- * M1 - REP_001: Fetch all products with their current active price
+ * REP_001: Fetch all products with their current active price.
+ * Uses the current_product_price view (singular — confirmed from DB).
  */
 export const fetchProductPriceReport = async () => {
+  // FIX: was 'current_product_prices' (plural) — view is 'current_product_price'
   const { data, error } = await supabase
-    .from('current_product_prices')
+    .from('current_product_price')
     .select('*');
 
   if (error) {
@@ -16,7 +19,7 @@ export const fetchProductPriceReport = async () => {
 };
 
 /**
- * M1 - REP_002: Fetch top selling products based on sales quantity
+ * REP_002: Fetch top selling products based on sales quantity.
  */
 export const fetchTopSellingReport = async (limit = 5) => {
   const { data, error } = await supabase
