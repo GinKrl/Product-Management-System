@@ -1,12 +1,15 @@
-import { supabase } from '/src/lib/supabaseClient';
+// src/services/priceHistService.js
+// FIX: was '/src/lib/supabaseClient' — absolute path fails in Vite
+import { supabase } from '../lib/supabaseClient';
 
 export const getPriceHistory = async (prodcode) => {
   try {
     const { data, error } = await supabase
-      .from('pricehist') 
+      .from('pricehist')
       .select('*')
       .eq('prodcode', prodcode)
-      .order('effDate', { ascending: false }); // FIXED: Matched exact schema casing
+      // FIX: column is 'effdate' lowercase — matches actual DB
+      .order('effdate', { ascending: false });
 
     if (error) throw error;
     return data;
@@ -19,11 +22,12 @@ export const getPriceHistory = async (prodcode) => {
 export const addPriceEntry = async (priceData) => {
   try {
     const { data, error } = await supabase
-      .from('pricehist') 
+      .from('pricehist')
       .insert([{
-        prodcode: priceData.prodcode,
-        effDate: priceData.effDate,     // FIXED: Matched exact schema casing
-        unitPrice: parseFloat(priceData.unitPrice) // FIXED: Matched exact schema casing
+        prodcode:  priceData.prodcode,
+        // FIX: columns are lowercase in actual DB
+        effdate:   priceData.effDate,
+        unitprice: parseFloat(priceData.unitPrice),
       }])
       .select();
 

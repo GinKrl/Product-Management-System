@@ -44,10 +44,14 @@ const DeletedItemsPage = () => {
     if (isAdmin) fetchDeleted(); 
   }, [isAdmin]);
 
+  // ONLY THIS FUNCTION CHANGES inside DeletedItemsPage.jsx
+// Replace your existing handleRecover with this:
+
   const handleRecover = async (prodcode) => {
     setRecoveringCode(prodcode);
     try {
-      await recoverProduct(prodcode);
+      // FIX: pass currentUser?.id so makeStamp records who recovered it
+      await recoverProduct(prodcode, currentUser?.id);
       showToast(`Product "${prodcode}" restored successfully.`);
       fetchDeleted();
     } catch (err) {
