@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { useRightsContext } from '../contexts/UserRightsContext';
 
-/* ─────────────────────────────────────────────
-   Helpers
-───────────────────────────────────────────── */
 const fmt = (n) => `₱${Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const downloadCSV = (rows) => {
@@ -23,25 +21,21 @@ const downloadCSV = (rows) => {
   URL.revokeObjectURL(url);
 };
 
-/* ─────────────────────────────────────────────
-   Data fetch — product + latest pricehist
-───────────────────────────────────────────── */
 const fetchProductReport = async () => {
-  // 1. All active products
+  // FIX: fetch ALL products (ADMIN/SUPERADMIN need to see INACTIVE too in the report)
+  // UI will gate the Inactive filter chip by role
   const { data: products, error: pErr } = await supabase
     .from('product')
     .select('*')
     .order('prodcode', { ascending: true });
   if (pErr) throw pErr;
 
-  // 2. Latest price per product (max effdate per prodcode)
   const { data: prices, error: hErr } = await supabase
     .from('pricehist')
     .select('prodcode, unitprice, effdate')
     .order('effdate', { ascending: false });
   if (hErr) throw hErr;
 
-  // Map: prodcode → latest unitprice
   const latestPrice = {};
   for (const row of prices || []) {
     if (!latestPrice[row.prodcode]) latestPrice[row.prodcode] = row.unitprice;
@@ -53,17 +47,18 @@ const fetchProductReport = async () => {
   }));
 };
 
-/* ─────────────────────────────────────────────
-   Component
-───────────────────────────────────────────── */
 const ProductReportPage = () => {
   const [rows, setRows]         = useState([]);
   const [isLoading, setLoading] = useState(true);
   const [error, setError]       = useState(null);
   const [search, setSearch]     = useState('');
-  const [filter, setFilter]     = useState('ALL');
+  const [filter, setFilter]     = useState('ACTIVE'); // FIX: default to ACTIVE per guide
   const [sortCol, setSortCol]   = useState('prodcode');
   const [sortDir, setSortDir]   = useState('asc');
+
+  // FIX: get userRole to gate the Inactive filter chip from USERs
+  const { userRole } = useRightsContext();
+  const isAdmin = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
 
   useEffect(() => {
     setLoading(true);
@@ -80,6 +75,8 @@ const ProductReportPage = () => {
   const visible = useMemo(() => {
     return [...rows]
       .filter(r => {
+        // FIX: non-admin users can never see INACTIVE rows
+        if (!isAdmin && r.record_status === 'INACTIVE') return false;
         if (filter !== 'ALL' && r.record_status !== filter) return false;
         if (search) {
           const q = search.toLowerCase();
@@ -92,10 +89,10 @@ const ProductReportPage = () => {
         if (sortCol === 'current_price') { av = Number(av || 0); bv = Number(bv || 0); }
         return sortDir === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
       });
-  }, [rows, filter, search, sortCol, sortDir]);
+  }, [rows, filter, search, sortCol, sortDir, isAdmin]);
 
   const stats = useMemo(() => {
-    const active   = rows.filter(r => r.record_status === 'ACTIVE');
+    const active    = rows.filter(r => r.record_status === 'ACTIVE');
     const withPrice = active.filter(r => r.current_price);
     const totalVal  = withPrice.reduce((s, r) => s + Number(r.current_price), 0);
     const avgPrice  = withPrice.length ? totalVal / withPrice.length : 0;
@@ -133,7 +130,6 @@ const ProductReportPage = () => {
 
         .rp-body{padding:28px 36px;display:flex;flex-direction:column;gap:24px;}
 
-        /* stat cards */
         .stat-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;animation:fadeUp .4s ease both .07s;}
         .sc{border-radius:18px;padding:20px 20px 16px;position:relative;overflow:hidden;transition:transform .22s cubic-bezier(.34,1.56,.64,1);}
         .sc:hover{transform:translateY(-3px) scale(1.01);}
@@ -156,7 +152,6 @@ const ProductReportPage = () => {
         .sc-bar-fill{height:100%;border-radius:99px;animation:barGrow 1.1s cubic-bezier(.22,1,.36,1) both .3s;transform-origin:left;}
         .sc-dark .sc-bar-fill{background:rgba(255,255,255,.4);}
 
-        /* table panel */
         .panel{background:var(--surface);border-radius:20px;border:1px solid var(--border);overflow:hidden;animation:fadeUp .4s ease both .14s;box-shadow:0 1px 3px rgba(0,0,0,.04);}
         .toolbar{padding:16px 22px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
         .toolbar-l{display:flex;align-items:center;gap:10px;}
@@ -210,7 +205,6 @@ const ProductReportPage = () => {
       `}</style>
 
       <div className="rp-root">
-        {/* Topbar */}
         <div className="rp-topbar">
           <div>
             <h1 className="rp-title">
@@ -230,7 +224,6 @@ const ProductReportPage = () => {
         <div className="rp-body">
           {error && <div className="err-banner">⚠ Failed to load: {error}</div>}
 
-          {/* Stat cards */}
           <div className="stat-row">
             <div className="sc sc-dark">
               <div className="sc-orb sc-orb-a" />
@@ -281,7 +274,6 @@ const ProductReportPage = () => {
             </div>
           </div>
 
-          {/* Table */}
           <div className="panel">
             <div className="toolbar">
               <div className="toolbar-l">
@@ -294,9 +286,11 @@ const ProductReportPage = () => {
                   <input className="srch" placeholder="Search code or name…" value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
                 <div className="f-chips">
-                  <button className={`f-chip ${filter==='ALL'?'fc-all':''}`} onClick={() => setFilter('ALL')}>All</button>
+                  {/* FIX: 'All' filter only shown to ADMIN/SUPERADMIN since it includes INACTIVE */}
+                  {isAdmin && <button className={`f-chip ${filter==='ALL'?'fc-all':''}`} onClick={() => setFilter('ALL')}>All</button>}
                   <button className={`f-chip ${filter==='ACTIVE'?'fc-active':''}`} onClick={() => setFilter('ACTIVE')}>Active</button>
-                  <button className={`f-chip ${filter==='INACTIVE'?'fc-inact':''}`} onClick={() => setFilter('INACTIVE')}>Inactive</button>
+                  {/* FIX: Inactive filter only shown to ADMIN/SUPERADMIN */}
+                  {isAdmin && <button className={`f-chip ${filter==='INACTIVE'?'fc-inact':''}`} onClick={() => setFilter('INACTIVE')}>Inactive</button>}
                 </div>
               </div>
             </div>
@@ -312,12 +306,13 @@ const ProductReportPage = () => {
                     <th className="no-sort">Unit</th>
                     <th onClick={() => handleSort('current_price')}>Current Price <SortIcon col="current_price" /></th>
                     <th onClick={() => handleSort('record_status')}>Status <SortIcon col="record_status" /></th>
-                    <th onClick={() => handleSort('stamp')}>Last Updated <SortIcon col="stamp" /></th>
+                    {/* FIX: stamp column only shown to ADMIN/SUPERADMIN per guide Section 2.3 */}
+                    {isAdmin && <th onClick={() => handleSort('stamp')}>Last Updated <SortIcon col="stamp" /></th>}
                   </tr>
                 </thead>
                 <tbody>
                   {visible.length === 0 ? (
-                    <tr><td colSpan={6}>
+                    <tr><td colSpan={isAdmin ? 6 : 5}>
                       <div className="tbl-state">
                         <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
                         <p>No products match your filter.</p>
@@ -338,9 +333,12 @@ const ProductReportPage = () => {
                           <span className="badge-dot" />{r.record_status}
                         </span>
                       </td>
-                      <td style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: 'var(--muted)' }}>
-                        {r.stamp ? new Date(r.stamp).toLocaleDateString('en-PH') : '—'}
-                      </td>
+                      {/* FIX: stamp displayed as plain text — it's VARCHAR(60) audit string, not a date */}
+                      {isAdmin && (
+                        <td style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: 'var(--muted)' }}>
+                          {r.stamp || '—'}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
