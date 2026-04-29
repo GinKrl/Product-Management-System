@@ -1,3 +1,4 @@
+// src/pages/AuthCallback.jsx
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
@@ -13,25 +14,23 @@ const AuthCallback = () => {
   ];
 
   useEffect(() => {
-    // Cycle through status messages
     const t1 = setTimeout(() => setStep(1), 900);
     const t2 = setTimeout(() => setStep(2), 1800);
 
-    // FIX: Immediate check for session (This fixes the "stuck" issue)
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        // Short delay so the user can actually see your cool "Loading your workspace" step
-        setTimeout(() => navigate('/dashboard'), 2000);
+        // FIX: was navigate('/dashboard') — route does not exist
+        setTimeout(() => navigate('/products'), 2000);
       }
     };
 
     checkSession();
 
-    // Listener for auth state changes (e.g., initial session or sign in)
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
-        setTimeout(() => navigate('/dashboard'), 1500);
+        // FIX: was navigate('/dashboard') — route does not exist
+        setTimeout(() => navigate('/products'), 1500);
       }
     });
 
