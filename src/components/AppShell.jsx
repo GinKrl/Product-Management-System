@@ -1,3 +1,4 @@
+// src/components/AppShell.jsx
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -60,11 +61,13 @@ const NAV_ITEMS = [
   {
     section: 'Analytics',
     items: [
-      // PR-01: Product Report — hidden from USER (requires REP_001 right)
       {
         label: 'Product Report',
         href: '/reports/products',
-        roles: ['ADMIN', 'SUPERADMIN'],
+        // FIX: was roles: ['ADMIN','SUPERADMIN'] — must gate by REP_001 right
+        // USER also has REP_001=1 so role-gating was wrong
+        // requiredRight is handled by ProtectedRoute; here we just show/hide in nav
+        requiredRight: 'REP_001',
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
@@ -75,11 +78,12 @@ const NAV_ITEMS = [
           </svg>
         ),
       },
-      // PR-01: Top Selling — hidden from USER (requires REP_002 right)
       {
         label: 'Top Selling',
         href: '/reports/top-selling',
-        roles: ['ADMIN', 'SUPERADMIN'],
+        // FIX: was roles: ['ADMIN','SUPERADMIN'] — must gate by REP_002 right
+        // REP_002=1 only for SUPERADMIN per rights matrix
+        requiredRight: 'REP_002',
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <path d="M18 20V10M12 20V4M6 20v-6"/>
@@ -129,7 +133,9 @@ const NAV_ITEMS = [
   },
 ];
 
-const canSee = (allowedRoles, userRole) => {
+// FIX: updated canSee to also handle requiredRight using rights from context
+// This is called inside the component where rights is available
+const canSeeByRole = (allowedRoles, userRole) => {
   if (!allowedRoles) return true;
   if (!userRole) return false;
   return allowedRoles.some(r => r.toUpperCase() === userRole.toUpperCase());
@@ -158,7 +164,7 @@ const AppShell = ({ children }) => {
   const location = useLocation();
 
   const { currentUser, loading: loadingAuth } = useAuth();
-  const { userRole, loadingRights }           = useRightsContext();
+  const { userRole, rights, loadingRights }   = useRightsContext();
 
   const userEmail    = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
@@ -180,15 +186,21 @@ const AppShell = ({ children }) => {
     else setSidebarOpen(s => !s);
   };
 
-  // Nav items that use an amber active state
   const AMBER_ROUTES = new Set(['/deleted-items']);
-  // Nav items that use a blue active state
   const BLUE_ROUTES  = new Set(['/reports/products', '/reports/top-selling']);
 
   const getActiveStyle = (href) => {
     if (AMBER_ROUTES.has(href)) return { bg: 'linear-gradient(90deg,#fffbeb,#fef3c7)', color: '#b45309', border: '#f59e0b' };
     if (BLUE_ROUTES.has(href))  return { bg: 'linear-gradient(90deg,#eff6ff,#dbeafe)', color: '#1d4ed8', border: '#3b82f6' };
     return { bg: 'linear-gradient(90deg,#fef2f2,#fee2e2)', color: '#b91c1c', border: '#b91c1c' };
+  };
+
+  // FIX: canSee now checks both roles AND requiredRight
+  const canSeeItem = (item) => {
+    if (item.requiredRight) {
+      return rights[item.requiredRight] === 1;
+    }
+    return canSeeByRole(item.roles, currentRole);
   };
 
   return (
@@ -251,8 +263,9 @@ const AppShell = ({ children }) => {
           {/* Nav */}
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
-              if (!canSee(section.roles, currentRole)) return null;
-              const visibleItems = section.items.filter(item => canSee(item.roles, currentRole));
+              if (!canSeeByRole(section.roles, currentRole)) return null;
+              // FIX: use canSeeItem which checks both roles and requiredRight
+              const visibleItems = section.items.filter(item => canSeeItem(item));
               if (visibleItems.length === 0) return null;
               return (
                 <div key={section.section} style={{ marginBottom: 4 }}>
@@ -262,7 +275,7 @@ const AppShell = ({ children }) => {
                     </p>
                   )}
                   {visibleItems.map((item) => {
-                    if (isSyncing && item.roles) return null;
+                    if (isSyncing && (item.roles || item.requiredRight)) return null;
                     const isActive = location.pathname === item.href;
                     const style    = getActiveStyle(item.href);
                     return (
