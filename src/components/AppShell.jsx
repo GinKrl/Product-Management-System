@@ -106,6 +106,19 @@ const NAV_ITEMS = [
     section: 'Settings',
     roles: ['ADMIN', 'SUPERADMIN'],
     items: [
+      // PR-02: User Management — gated by ADM_USER right
+      {
+        label: 'User Management',
+        href: '/admin/users',
+        roles: ['ADMIN', 'SUPERADMIN'],
+        icon: (
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
+            <circle cx="9" cy="7" r="4" />
+            <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" />
+            <path d="M19 11l2 2 4-4" />
+          </svg>
+        ),
+      },
       {
         label: 'Team',
         href: '#',
@@ -187,10 +200,12 @@ const AppShell = ({ children }) => {
 
   const AMBER_ROUTES = new Set(['/deleted-items']);
   const BLUE_ROUTES  = new Set(['/reports/products', '/reports/top-selling']);
+  const GREEN_ROUTES = new Set(['/admin/users']);
 
   const getActiveStyle = (href) => {
     if (AMBER_ROUTES.has(href)) return { bg: 'linear-gradient(90deg,#fffbeb,#fef3c7)', color: '#b45309', border: '#f59e0b' };
     if (BLUE_ROUTES.has(href))  return { bg: 'linear-gradient(90deg,#eff6ff,#dbeafe)', color: '#1d4ed8', border: '#3b82f6' };
+    if (GREEN_ROUTES.has(href)) return { bg: 'linear-gradient(90deg,#f0fdf4,#dcfce7)', color: '#166534', border: '#22c55e' };
     return { bg: 'linear-gradient(90deg,#fef2f2,#fee2e2)', color: '#b91c1c', border: '#b91c1c' };
   };
 
