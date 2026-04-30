@@ -1,46 +1,58 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import * as supabaseModule from '../../src/lib/supabaseClient';
 import ProtectedRoute from '../../src/components/ProtectedRoute.jsx';
-import { AuthProvider, useAuth } from '../../src/contexts/AuthContext.jsx';
+
+// Import hooks for mocking
+import { useAuth } from '../../src/contexts/AuthContext.jsx';
 import { useRightsContext } from '../../src/contexts/UserRightsContext.jsx';
 
+// Mock with default returns - but allow override with mockReturnValue
 vi.mock('../../src/contexts/AuthContext.jsx', () => ({
   AuthProvider: ({ children }) => <div>{children}</div>,
-  useAuth: vi.fn(),
+  useAuth: vi.fn(() => ({ session: null, loading: false })),
 }));
 
 vi.mock('../../src/contexts/UserRightsContext.jsx', () => ({
   UserRightsProvider: ({ children }) => <div>{children}</div>,
-  useRightsContext: vi.fn(),
+  useRightsContext: vi.fn(() => ({ rights: {}, userRole: null, loadingRights: false })),
 }));
 
 const TestDashboard = () => <div data-testid="dashboard-content">Dashboard Content</div>;
+const LoginPage = () => <div data-testid="login-page">Login Page</div>;
+const ProductsPage = () => <div data-testid="products-page">Products Page</div>;
 
-const renderProtected = (path = '/') => {
+const renderProtected = (path = '/', options = {}) => {
+  const { 
+    allowedRoles = undefined, 
+    requiredRight = undefined, 
+    session = null, 
+    userRole = null, 
+    rights = {},
+    loadingRights = false,
+    loading = false
+  } = options;
+  
+  // Set up mocks before render
+  useAuth.mockReturnValue({ session, loading });
+  useRightsContext.mockReturnValue({ rights, userRole, loadingRights });
+  
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <AuthProvider>
-        <Routes>
-          <Route path="/" element={
-            <ProtectedRoute>
-              <TestDashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/login" element={<div data-testid="login-page">Login Page</div>} />
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <TestDashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/products" element={
-            <ProtectedRoute>
-              <TestDashboard />
-            </ProtectedRoute>
-          } />
-        </Routes>
-      </AuthProvider>
+      <Routes>
+        <Route path="/" element={
+          <ProtectedRoute allowedRoles={allowedRoles} requiredRight={requiredRight}>
+            <TestDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/dashboard" element={
+          <ProtectedRoute allowedRoles={allowedRoles} requiredRight={requiredRight}>
+            <TestDashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/products" element={<ProductsPage />} />
+      </Routes>
     </MemoryRouter>
   );
 };
@@ -48,57 +60,74 @@ const renderProtected = (path = '/') => {
 describe('ProtectedRoute Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useAuth).mockReturnValue({ session: null, loading: false });
-    vi.mocked(useRightsContext).mockReturnValue({
-      rights: {},
-      userRole: 'USER',
-      loadingRights: false,
-    });
   });
 
-  it('shows loading screen while loading', () => {
-    vi.mocked(useAuth).mockReturnValue({ session: null, loading: true });
-    vi.mocked(useRightsContext).mockReturnValue({
-      rights: {},
-      userRole: 'USER',
-      loadingRights: true,
+  it('shows loading screen while auth and rights are loading', () => {
+    renderProtected('/', { 
+      loading: true, 
+      loadingRights: true 
     });
-    renderProtected();
     expect(screen.getByText('Verifying Permissions...')).toBeInTheDocument();
   });
 
-  it('redirects to /login if no session', () => {
-    renderProtected('/dashboard');
+  it('redirects to /login when no session (logged out)', () => {
+    renderProtected('/dashboard', { session: null });
     expect(screen.getByTestId('login-page')).toBeInTheDocument();
   });
 
-  it('allows access to /products if ACTIVE user session', () => {
-    vi.mocked(useAuth).mockReturnValue({ 
-      session: { user: { id: 'active-user-id' } }, 
-      loading: false 
+  it('redirects to /login when session is null (INACTIVE user treated as signed out)', () => {
+    // INACTIVE users in AuthContext get session = null and are redirected to /login
+    renderProtected('/dashboard', { session: null });
+    expect(screen.getByTestId('login-page')).toBeInTheDocument();
+  });
+
+it('allows access when ACTIVE user has valid session without restrictions', () => {
+    // Session exists with userRole and no requiredRight or allowedRoles - should allow
+    // Use /dashboard which HAS ProtectedRoute wrapper
+    renderProtected('/dashboard', { 
+      session: { user: { id: 'active-user-id' } },
+      userRole: 'USER' // Need userRole to be set, otherwise ProtectedRoute blocks
     });
-    renderProtected('/products');
     expect(screen.getByTestId('dashboard-content')).toBeInTheDocument();
   });
 
-  it('login guard blocks INACTIVE user with alert (AuthContext)', () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-    
-    vi.mocked(useAuth).mockReturnValue({ 
-      session: { 
-        user: { id: 'inactive-user-id' } 
-      }, 
-      loading: false 
+  it('redirects to /products when user lacks required right (non-SUPERADMIN)', () => {
+    renderProtected('/dashboard', { 
+      session: { user: { id: 'user-id' } },
+      requiredRight: 'PRD_DEL',
+      userRole: 'USER',
+      rights: {} // No PRD_DEL right
     });
+    expect(screen.getByTestId('products-page')).toBeInTheDocument();
+  });
 
-    renderProtected('/products');
-    
-    // ProtectedRoute renders dashboard initially (AuthContext guard triggers async alert for INACTIVE)
+  it('allows SUPERADMIN bypass without checking rights', () => {
+    renderProtected('/dashboard', { 
+      session: { user: { id: 'superadmin-id' } },
+      requiredRight: 'PRD_DEL',
+      userRole: 'SUPERADMIN',
+      rights: {} // Empty - SUPERADMIN bypasses
+    });
     expect(screen.getByTestId('dashboard-content')).toBeInTheDocument();
-    
-    // MANUAL VERIFICATION NOTE: AuthContext useEffect queries user DB → if INACTIVE: alert + signOut + /login redirect
-    // Test confirms ProtectedRoute logic; full guard verified manually via Supabase + login flows
-    
-    alertSpy.mockRestore();
+  });
+
+  it('redirects to /products when user role not in allowedRoles', () => {
+    renderProtected('/dashboard', { 
+      session: { user: { id: 'user-id' } },
+      allowedRoles: ['ADMIN', 'SUPERADMIN'],
+      userRole: 'USER', // Not in allowedRoles
+      rights: { PRD_ADD: 1 }
+    });
+    expect(screen.getByTestId('products-page')).toBeInTheDocument();
+  });
+
+  it('allows access when user role matches allowedRoles', () => {
+    renderProtected('/dashboard', { 
+      session: { user: { id: 'admin-id' } },
+      allowedRoles: ['ADMIN', 'SUPERADMIN'],
+      userRole: 'ADMIN',
+      rights: { PRD_ADD: 1 }
+    });
+    expect(screen.getByTestId('dashboard-content')).toBeInTheDocument();
   });
 });

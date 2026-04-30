@@ -50,144 +50,149 @@ const renderWithRight = (userType, rights, requiredRight) => {
   );
 };
 
-describe('Rights Test Matrix — 3 User Types × 6 Rights = 18 Cases', () => {
+describe('Rights Matrix — 3 User Types × 6 Rights', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  /* ================================================================
-     USER — No special rights assigned
-     Expected: All 6 rights → FAIL (redirect to /products)
-     ================================================================ */
+  /**
+   * ================================================================
+   * USER — No special rights assigned
+   * Expected: All 6 rights → FAIL (redirect to /products)
+   * ================================================================
+   */
   describe('USER (no rights)', () => {
     const userType = 'USER';
     const rights = {};
 
-    it(`[FAIL] ${userType} × PRD_ADD → redirects to /products`, () => {
+    it(`${userType} × PRD_ADD → FAIL (redirects to /products)`, () => {
       renderWithRight(userType, rights, 'PRD_ADD');
       expect(screen.getByTestId('products-page')).toBeInTheDocument();
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
     });
 
-    it(`[FAIL] ${userType} × PRD_EDIT → redirects to /products`, () => {
+    it(`${userType} × PRD_EDIT → FAIL (redirects to /products)`, () => {
       renderWithRight(userType, rights, 'PRD_EDIT');
       expect(screen.getByTestId('products-page')).toBeInTheDocument();
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
     });
 
-    it(`[FAIL] ${userType} × PRD_DEL → redirects to /products`, () => {
+    it(`${userType} × PRD_DEL → FAIL (redirects to /products)`, () => {
       renderWithRight(userType, rights, 'PRD_DEL');
       expect(screen.getByTestId('products-page')).toBeInTheDocument();
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
     });
 
-    it(`[FAIL] ${userType} × REP_001 → redirects to /products`, () => {
+    it(`${userType} × REP_001 → FAIL (redirects to /products)`, () => {
       renderWithRight(userType, rights, 'REP_001');
       expect(screen.getByTestId('products-page')).toBeInTheDocument();
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
     });
 
-    it(`[FAIL] ${userType} × REP_002 → redirects to /products`, () => {
+    it(`${userType} × REP_002 → FAIL (redirects to /products)`, () => {
       renderWithRight(userType, rights, 'REP_002');
       expect(screen.getByTestId('products-page')).toBeInTheDocument();
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
     });
 
-    it(`[FAIL] ${userType} × ADM_USER → redirects to /products`, () => {
+    it(`${userType} × ADM_USER → FAIL (redirects to /products)`, () => {
       renderWithRight(userType, rights, 'ADM_USER');
       expect(screen.getByTestId('products-page')).toBeInTheDocument();
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
     });
   });
 
-  /* ================================================================
-     ADMIN — Product + Report rights, NO ADM_USER
-     Expected: PRD_ADD/EDIT/DEL, REP_001/002 → PASS
-               ADM_USER → FAIL
-     ================================================================ */
-  describe('ADMIN (product & report rights only)', () => {
+  /**
+   * ================================================================
+   * ADMIN — Product + Report rights (limited access)
+   * Expected: PRD_ADD, PRD_EDIT, REP_001 → PASS
+   *           PRD_DEL, REP_002, ADM_USER → FAIL
+   * ================================================================
+   */
+  describe('ADMIN (limited access - cannot delete products or run REP_002)', () => {
     const userType = 'ADMIN';
 
-    it(`[PASS] ${userType} × PRD_ADD → renders protected content`, () => {
+    it(`${userType} × PRD_ADD → PASS (renders protected content)`, () => {
       renderWithRight(userType, { PRD_ADD: 1 }, 'PRD_ADD');
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
       expect(screen.queryByTestId('products-page')).not.toBeInTheDocument();
     });
 
-    it(`[PASS] ${userType} × PRD_EDIT → renders protected content`, () => {
+    it(`${userType} × PRD_EDIT → PASS (renders protected content)`, () => {
       renderWithRight(userType, { PRD_EDIT: 1 }, 'PRD_EDIT');
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
       expect(screen.queryByTestId('products-page')).not.toBeInTheDocument();
     });
 
-    it(`[PASS] ${userType} × PRD_DEL → renders protected content`, () => {
+    it(`${userType} × PRD_DEL → FAIL (redirects to /products) - ADMIN cannot delete products`, () => {
       renderWithRight(userType, { PRD_DEL: 1 }, 'PRD_DEL');
-      expect(screen.getByTestId('protected-content')).toBeInTheDocument();
-      expect(screen.queryByTestId('products-page')).not.toBeInTheDocument();
+      expect(screen.getByTestId('products-page')).toBeInTheDocument();
+      expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
     });
 
-    it(`[PASS] ${userType} × REP_001 → renders protected content`, () => {
+    it(`${userType} × REP_001 → PASS (renders protected content)`, () => {
       renderWithRight(userType, { REP_001: 1 }, 'REP_001');
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
       expect(screen.queryByTestId('products-page')).not.toBeInTheDocument();
     });
 
-    it(`[PASS] ${userType} × REP_002 → renders protected content`, () => {
+    it(`${userType} × REP_002 → FAIL (redirects to /products) - ADMIN cannot run REP_002`, () => {
       renderWithRight(userType, { REP_002: 1 }, 'REP_002');
-      expect(screen.getByTestId('protected-content')).toBeInTheDocument();
-      expect(screen.queryByTestId('products-page')).not.toBeInTheDocument();
+      expect(screen.getByTestId('products-page')).toBeInTheDocument();
+      expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
     });
 
-    it(`[FAIL] ${userType} × ADM_USER → redirects to /products`, () => {
+    it(`${userType} × ADM_USER → FAIL (redirects to /products)`, () => {
       renderWithRight(userType, {}, 'ADM_USER');
       expect(screen.getByTestId('products-page')).toBeInTheDocument();
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument();
     });
   });
 
-  /* ================================================================
-     SUPERADMIN — Bypass grants all rights unconditionally
-     Expected: All 6 rights → PASS (even with empty rights map)
-     ================================================================ */
-  describe('SUPERADMIN (bypass — all rights)', () => {
+  /**
+   * ================================================================
+   * SUPERADMIN — Bypass grants all rights unconditionally
+   * Expected: All 6 rights → PASS (even with empty rights map)
+   * ================================================================
+   */
+  describe('SUPERADMIN (bypass — all rights granted)', () => {
     const userType = 'SUPERADMIN';
-    const rights = {}; // Empty map — bypass should still grant access
+    const rights = {}; // Empty map — bypass grants all access
 
-    it(`[PASS] ${userType} × PRD_ADD → renders protected content (bypass)`, () => {
+    it(`${userType} × PRD_ADD → PASS (renders protected content via bypass)`, () => {
       renderWithRight(userType, rights, 'PRD_ADD');
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
       expect(screen.queryByTestId('products-page')).not.toBeInTheDocument();
     });
 
-    it(`[PASS] ${userType} × PRD_EDIT → renders protected content (bypass)`, () => {
+    it(`${userType} × PRD_EDIT → PASS (renders protected content via bypass)`, () => {
       renderWithRight(userType, rights, 'PRD_EDIT');
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
       expect(screen.queryByTestId('products-page')).not.toBeInTheDocument();
     });
 
-    it(`[PASS] ${userType} × PRD_DEL → renders protected content (bypass)`, () => {
+    it(`${userType} × PRD_DEL → PASS (renders protected content via bypass)`, () => {
       renderWithRight(userType, rights, 'PRD_DEL');
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
       expect(screen.queryByTestId('products-page')).not.toBeInTheDocument();
     });
 
-    it(`[PASS] ${userType} × REP_001 → renders protected content (bypass)`, () => {
+    it(`${userType} × REP_001 → PASS (renders protected content via bypass)`, () => {
       renderWithRight(userType, rights, 'REP_001');
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
       expect(screen.queryByTestId('products-page')).not.toBeInTheDocument();
     });
 
-    it(`[PASS] ${userType} × REP_002 → renders protected content (bypass)`, () => {
+    it(`${userType} × REP_002 → PASS (renders protected content via bypass)`, () => {
       renderWithRight(userType, rights, 'REP_002');
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
       expect(screen.queryByTestId('products-page')).not.toBeInTheDocument();
     });
 
-    it(`[PASS] ${userType} × ADM_USER → renders protected content (bypass)`, () => {
+    it(`${userType} × ADM_USER → PASS (renders protected content via bypass)`, () => {
       renderWithRight(userType, rights, 'ADM_USER');
       expect(screen.getByTestId('protected-content')).toBeInTheDocument();
       expect(screen.queryByTestId('products-page')).not.toBeInTheDocument();
     });
   });
 });
-

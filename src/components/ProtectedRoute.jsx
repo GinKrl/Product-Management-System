@@ -30,8 +30,13 @@ const ProtectedRoute = ({ children, allowedRoles, requiredRight }) => {
   const currentRole = userRole?.toUpperCase();
 
   // 3. Right Check (Sprint 3 Requirement)
-  // FIXED: Accesses the object property directly instead of treating it like an array
+  // Role-based restrictions: ADMIN cannot perform PRD_DEL or REP_002
   if (requiredRight) {
+    if (currentRole === 'ADMIN' && (requiredRight === 'PRD_DEL' || requiredRight === 'REP_002')) {
+      console.warn(`Access Denied: ${currentRole} is not permitted to perform ${requiredRight}`);
+      return <Navigate to="/products" replace />;
+    }
+
     const hasRight = rights[requiredRight] === 1;
     
     if (!hasRight && currentRole !== 'SUPERADMIN') {
