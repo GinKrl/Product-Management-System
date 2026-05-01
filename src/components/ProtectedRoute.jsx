@@ -36,7 +36,7 @@ const ProtectedRoute = ({ children, allowedRoles, requiredRight }) => {
     
     if (!hasRight && currentRole !== 'SUPERADMIN') {
       console.warn(`Access Denied: Missing right ${requiredRight}`);
-      return <Navigate to="/products" replace />;
+      return <Navigate to="/products-landing" replace />;
     }
   }
 
@@ -51,7 +51,7 @@ const ProtectedRoute = ({ children, allowedRoles, requiredRight }) => {
     
     if (!hasAccess) {
       console.warn(`Access Denied for ${currentRole}. Required: ${allowedRoles}`);
-      return <Navigate to="/products" replace />;
+      return <Navigate to="/products-landing" replace />;
     }
   }
 
