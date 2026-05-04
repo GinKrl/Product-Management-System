@@ -1,12 +1,8 @@
-// src/components/AppShell.jsx
-// MERGED: M4 PR-01 (rights gating) + M2 PR-02 (User Management link + getActiveStyle)
-// FIX: User Management item uses requiredRight:'ADM_USER' not roles:['ADMIN','SUPERADMIN']
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRightsContext } from '../contexts/UserRightsContext';
 import { supabase } from '../lib/supabaseClient';
-
 
 const NAV_ITEMS = [
   {
@@ -67,6 +63,9 @@ const NAV_ITEMS = [
       {
         label: 'Product Report',
         href: '/reports/products',
+        // FIX: was roles: ['ADMIN','SUPERADMIN'] — must gate by REP_001 right
+        // USER also has REP_001=1 so role-gating was wrong
+        // requiredRight is handled by ProtectedRoute; here we just show/hide in nav
         requiredRight: 'REP_001',
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
@@ -81,6 +80,8 @@ const NAV_ITEMS = [
       {
         label: 'Top Selling',
         href: '/reports/top-selling',
+        // FIX: was roles: ['ADMIN','SUPERADMIN'] — must gate by REP_002 right
+        // REP_002=1 only for SUPERADMIN per rights matrix
         requiredRight: 'REP_002',
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
@@ -103,16 +104,13 @@ const NAV_ITEMS = [
   },
   {
     section: 'Settings',
-<<<<<<< HEAD
     roles: ['ADMIN', 'SUPERADMIN'],
     items: [
+      // PR-02: User Management — gated by ADM_USER right
       {
         label: 'User Management',
         href: '/admin/users',
-        // FIX: M2 had roles:['ADMIN','SUPERADMIN'] — wrong.
-        // Must use requiredRight:'ADM_USER' per sprint deliverable and rights matrix.
-        // ADM_USER=1 only for SUPERADMIN, so ADMIN will not see this link.
-        requiredRight: 'ADM_USER',
+        roles: ['ADMIN', 'SUPERADMIN'],
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <circle cx="9" cy="7" r="4" />
@@ -123,22 +121,6 @@ const NAV_ITEMS = [
       },
       {
         label: 'Team',
-=======
-  items: [
-    {
-      label: 'Admin',
-      href: '/admin/users',
-      requiredRight: 'ADM_USER',
-      icon: (
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-        </svg>
-      ),
-    },
-    {
-      label: 'Team',
->>>>>>> origin/dev
         href: '#',
         roles: ['ADMIN', 'SUPERADMIN'],
         icon: (
@@ -163,18 +145,13 @@ const NAV_ITEMS = [
   },
 ];
 
-<<<<<<< HEAD
-=======
-
 // FIX: updated canSee to also handle requiredRight using rights from context
 // This is called inside the component where rights is available
->>>>>>> origin/dev
 const canSeeByRole = (allowedRoles, userRole) => {
   if (!allowedRoles) return true;
   if (!userRole) return false;
   return allowedRoles.some(r => r.toUpperCase() === userRole.toUpperCase());
 };
-
 
 const getPageLabel = (pathname) => {
   const map = {
@@ -190,49 +167,40 @@ const getPageLabel = (pathname) => {
   return map[pathname] ?? 'Dashboard';
 };
 
-
 const AppShell = ({ children }) => {
   const [sidebarOpen, setSidebarOpen]   = useState(true);
   const [mobileOpen, setMobileOpen]     = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-
   const navigate = useNavigate();
   const location = useLocation();
 
-
   const { currentUser, loading: loadingAuth } = useAuth();
   const { userRole, rights, loadingRights }   = useRightsContext();
-
 
   const userEmail    = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
   const currentRole  = userRole?.toUpperCase() || 'USER';
   const isSyncing    = loadingAuth || loadingRights;
 
-
   const SIDEBAR_W   = 232;
   const COLLAPSED_W = 64;
   const NAVBAR_H    = 56;
   const effectiveW  = sidebarOpen ? SIDEBAR_W : COLLAPSED_W;
-
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
   };
 
-
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) setMobileOpen(o => !o);
     else setSidebarOpen(s => !s);
   };
 
-
   const AMBER_ROUTES = new Set(['/deleted-items']);
   const BLUE_ROUTES  = new Set(['/reports/products', '/reports/top-selling']);
   const GREEN_ROUTES = new Set(['/admin/users']);
-
 
   const getActiveStyle = (href) => {
     if (AMBER_ROUTES.has(href)) return { bg: 'linear-gradient(90deg,#fffbeb,#fef3c7)', color: '#b45309', border: '#f59e0b' };
@@ -241,18 +209,13 @@ const AppShell = ({ children }) => {
     return { bg: 'linear-gradient(90deg,#fef2f2,#fee2e2)', color: '#b91c1c', border: '#b91c1c' };
   };
 
-<<<<<<< HEAD
-=======
-
   // FIX: canSee now checks both roles AND requiredRight
->>>>>>> origin/dev
   const canSeeItem = (item) => {
     if (item.requiredRight) {
       return rights[item.requiredRight] === 1;
     }
     return canSeeByRole(item.roles, currentRole);
   };
-
 
   return (
     <>
@@ -285,18 +248,17 @@ const AppShell = ({ children }) => {
         .sidebar-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
       `}</style>
 
-
       <div
         style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'DM Sans',sans-serif" }}
         onClick={() => userMenuOpen && setUserMenuOpen(false)}
       >
         {mobileOpen && <div className="mobile-overlay" onClick={() => setMobileOpen(false)} />}
 
-
         <aside
           className={`shell-sidebar sidebar-scroll ${mobileOpen ? 'mobile-open' : ''}`}
           style={{ width: effectiveW, background: '#fff', borderRight: '1px solid rgba(0,0,0,0.07)', display: 'flex', flexDirection: 'column', flexShrink: 0, height: '100vh', overflowY: 'auto', overflowX: 'hidden', boxShadow: '2px 0 16px rgba(0,0,0,0.04)' }}
         >
+          {/* Brand */}
           <div style={{ height: NAVBAR_H, display: 'flex', alignItems: 'center', gap: 10, padding: sidebarOpen ? '0 18px' : '0', justifyContent: sidebarOpen ? 'flex-start' : 'center', borderBottom: '1px solid rgba(0,0,0,0.06)', flexShrink: 0 }}>
             <div style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, background: 'linear-gradient(135deg,#7f1d1d,#b91c1c 55%,#e11d48)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(185,28,28,0.35)' }}>
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth="2.4">
@@ -312,14 +274,11 @@ const AppShell = ({ children }) => {
             )}
           </div>
 
-<<<<<<< HEAD
-=======
-
           {/* Nav */}
->>>>>>> origin/dev
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
               if (!canSeeByRole(section.roles, currentRole)) return null;
+              // FIX: use canSeeItem which checks both roles and requiredRight
               const visibleItems = section.items.filter(item => canSeeItem(item));
               if (visibleItems.length === 0) return null;
               return (
@@ -330,7 +289,7 @@ const AppShell = ({ children }) => {
                     </p>
                   )}
                   {visibleItems.map((item) => {
-                    if (loadingRights && item.requiredRight) return null;
+                    if (isSyncing && (item.roles || item.requiredRight)) return null;
                     const isActive = location.pathname === item.href;
                     const style    = getActiveStyle(item.href);
                     return (
@@ -361,11 +320,7 @@ const AppShell = ({ children }) => {
             })}
           </nav>
 
-<<<<<<< HEAD
-=======
-
           {/* User footer */}
->>>>>>> origin/dev
           <div style={{ padding: sidebarOpen ? '12px 14px' : '12px 8px', borderTop: '1px solid rgba(0,0,0,0.06)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 12, background: '#f9fafb', border: '1px solid #f3f4f6', justifyContent: sidebarOpen ? 'flex-start' : 'center' }}>
               <div style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, background: 'linear-gradient(135deg,#fef2f2,#fca5a5)', color: '#b91c1c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>{userInitials}</div>
@@ -383,11 +338,7 @@ const AppShell = ({ children }) => {
           </div>
         </aside>
 
-<<<<<<< HEAD
-=======
-
         {/* Main */}
->>>>>>> origin/dev
         <div className="shell-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
           <header style={{ position: 'absolute', top: 0, left: 0, right: 0, height: NAVBAR_H, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(0,0,0,0.07)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 12, flexShrink: 0, zIndex: 50, boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}>
             <button className="nb-icon-btn" onClick={toggleSidebar} style={{ width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', color: '#9ca3af' }}>
@@ -426,6 +377,4 @@ const AppShell = ({ children }) => {
   );
 };
 
-
 export default AppShell;
-
