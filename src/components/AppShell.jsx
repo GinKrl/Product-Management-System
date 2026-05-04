@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useRightsContext } from '../contexts/UserRightsContext';
 import { supabase } from '../lib/supabaseClient';
 
+
 const NAV_ITEMS = [
   {
     section: 'Main',
@@ -104,10 +105,20 @@ const NAV_ITEMS = [
   },
   {
     section: 'Settings',
-    roles: ['ADMIN', 'SUPERADMIN'],
-    items: [
-      {
-        label: 'Team',
+  items: [
+    {
+      label: 'Admin',
+      href: '/admin/users',
+      requiredRight: 'ADM_USER',
+      icon: (
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+        </svg>
+      ),
+    },
+    {
+      label: 'Team',
         href: '#',
         roles: ['ADMIN', 'SUPERADMIN'],
         icon: (
@@ -132,6 +143,7 @@ const NAV_ITEMS = [
   },
 ];
 
+
 // FIX: updated canSee to also handle requiredRight using rights from context
 // This is called inside the component where rights is available
 const canSeeByRole = (allowedRoles, userRole) => {
@@ -139,6 +151,7 @@ const canSeeByRole = (allowedRoles, userRole) => {
   if (!userRole) return false;
   return allowedRoles.some(r => r.toUpperCase() === userRole.toUpperCase());
 };
+
 
 const getPageLabel = (pathname) => {
   const map = {
@@ -154,45 +167,55 @@ const getPageLabel = (pathname) => {
   return map[pathname] ?? 'Dashboard';
 };
 
+
 const AppShell = ({ children }) => {
   const [sidebarOpen, setSidebarOpen]   = useState(true);
   const [mobileOpen, setMobileOpen]     = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
+
   const navigate = useNavigate();
   const location = useLocation();
 
+
   const { currentUser, loading: loadingAuth } = useAuth();
   const { userRole, rights, loadingRights }   = useRightsContext();
+
 
   const userEmail    = currentUser?.email || 'User';
   const userInitials = userEmail.substring(0, 2).toUpperCase();
   const currentRole  = userRole?.toUpperCase() || 'USER';
   const isSyncing    = loadingAuth || loadingRights;
 
+
   const SIDEBAR_W   = 232;
   const COLLAPSED_W = 64;
   const NAVBAR_H    = 56;
   const effectiveW  = sidebarOpen ? SIDEBAR_W : COLLAPSED_W;
+
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/login');
   };
 
+
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) setMobileOpen(o => !o);
     else setSidebarOpen(s => !s);
   };
 
+
   const AMBER_ROUTES = new Set(['/deleted-items']);
   const BLUE_ROUTES  = new Set(['/reports/products', '/reports/top-selling']);
+
 
   const getActiveStyle = (href) => {
     if (AMBER_ROUTES.has(href)) return { bg: 'linear-gradient(90deg,#fffbeb,#fef3c7)', color: '#b45309', border: '#f59e0b' };
     if (BLUE_ROUTES.has(href))  return { bg: 'linear-gradient(90deg,#eff6ff,#dbeafe)', color: '#1d4ed8', border: '#3b82f6' };
     return { bg: 'linear-gradient(90deg,#fef2f2,#fee2e2)', color: '#b91c1c', border: '#b91c1c' };
   };
+
 
   // FIX: canSee now checks both roles AND requiredRight
   const canSeeItem = (item) => {
@@ -201,6 +224,7 @@ const AppShell = ({ children }) => {
     }
     return canSeeByRole(item.roles, currentRole);
   };
+
 
   return (
     <>
@@ -233,11 +257,13 @@ const AppShell = ({ children }) => {
         .sidebar-scroll::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
       `}</style>
 
+
       <div
         style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'DM Sans',sans-serif" }}
         onClick={() => userMenuOpen && setUserMenuOpen(false)}
       >
         {mobileOpen && <div className="mobile-overlay" onClick={() => setMobileOpen(false)} />}
+
 
         <aside
           className={`shell-sidebar sidebar-scroll ${mobileOpen ? 'mobile-open' : ''}`}
@@ -259,6 +285,7 @@ const AppShell = ({ children }) => {
             )}
           </div>
 
+
           {/* Nav */}
           <nav style={{ flex: 1, padding: '14px 0' }}>
             {NAV_ITEMS.map((section) => {
@@ -274,7 +301,7 @@ const AppShell = ({ children }) => {
                     </p>
                   )}
                   {visibleItems.map((item) => {
-                    if (isSyncing && (item.roles || item.requiredRight)) return null;
+                    if (loadingRights && item.requiredRight) return null;
                     const isActive = location.pathname === item.href;
                     const style    = getActiveStyle(item.href);
                     return (
@@ -305,6 +332,7 @@ const AppShell = ({ children }) => {
             })}
           </nav>
 
+
           {/* User footer */}
           <div style={{ padding: sidebarOpen ? '12px 14px' : '12px 8px', borderTop: '1px solid rgba(0,0,0,0.06)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 10px', borderRadius: 12, background: '#f9fafb', border: '1px solid #f3f4f6', justifyContent: sidebarOpen ? 'flex-start' : 'center' }}>
@@ -322,6 +350,7 @@ const AppShell = ({ children }) => {
             </button>
           </div>
         </aside>
+
 
         {/* Main */}
         <div className="shell-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
@@ -361,5 +390,6 @@ const AppShell = ({ children }) => {
     </>
   );
 };
+
 
 export default AppShell;
