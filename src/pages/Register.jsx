@@ -3,12 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
 const Register = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // CHANGED: split 'name' into three separate fields the trigger actually reads
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName]   = useState('');
+  const [username, setUsername]   = useState('');
+  const [email, setEmail]         = useState('');
+  const [password, setPassword]   = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading]     = useState(false);
+  const [errorMsg, setErrorMsg]   = useState('');
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
@@ -20,7 +23,15 @@ const Register = () => {
       email,
       password,
       options: {
-        data: { full_name: name },
+        // CHANGED: now passes firstName, lastName, username so the
+        // provision_new_user() trigger can populate those DB columns.
+        // full_name is kept as a fallback for Google OAuth display.
+        data: {
+          firstName,
+          lastName,
+          username,
+          full_name: `${firstName} ${lastName}`,
+        },
       },
     });
 
@@ -152,6 +163,8 @@ const Register = () => {
         .f5 { animation: fadeUp .4s ease both .24s; }
         .f6 { animation: fadeUp .4s ease both .29s; }
         .f7 { animation: fadeUp .4s ease both .34s; }
+        .f8 { animation: fadeUp .4s ease both .39s; }
+        .f9 { animation: fadeUp .4s ease both .44s; }
       `}</style>
 
       <div style={{ display:'flex', height:'100vh', width:'100vw', overflow:'hidden', fontFamily:"'DM Sans',sans-serif" }}>
@@ -264,22 +277,36 @@ const Register = () => {
 
           <form onSubmit={handleRegister} style={{ display:'flex', flexDirection:'column', gap:14 }}>
 
-            {/* Full Name */}
-            <div className="f3" style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:'#3d3350' }}>Full Name</label>
-              <input className="inp" type="text" required placeholder="John Doe"
-                value={name} onChange={e => setName(e.target.value)} />
+            {/* CHANGED: First Name + Last Name side by side (was single "Full Name" field) */}
+            <div className="f3" style={{ display:'flex', gap:12 }}>
+              <div style={{ flex:1, display:'flex', flexDirection:'column', gap:6 }}>
+                <label style={{ fontSize:12, fontWeight:600, color:'#3d3350' }}>First Name</label>
+                <input className="inp" type="text" required placeholder="John"
+                  value={firstName} onChange={e => setFirstName(e.target.value)} />
+              </div>
+              <div style={{ flex:1, display:'flex', flexDirection:'column', gap:6 }}>
+                <label style={{ fontSize:12, fontWeight:600, color:'#3d3350' }}>Last Name</label>
+                <input className="inp" type="text" required placeholder="Doe"
+                  value={lastName} onChange={e => setLastName(e.target.value)} />
+              </div>
             </div>
 
-            {/* Email */}
+            {/* CHANGED: new Username field */}
             <div className="f3" style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:'#3d3350' }}>Username</label>
+              <input className="inp" type="text" required placeholder="johndoe"
+                value={username} onChange={e => setUsername(e.target.value)} />
+            </div>
+
+            {/* Email — was f3, now f4 because two new fields push it down */}
+            <div className="f4" style={{ display:'flex', flexDirection:'column', gap:6 }}>
               <label style={{ fontSize:12, fontWeight:600, color:'#3d3350' }}>Email address</label>
               <input className="inp" type="email" required placeholder="you@example.com"
                 value={email} onChange={e => setEmail(e.target.value)} />
             </div>
 
-            {/* Password */}
-            <div className="f4" style={{ display:'flex', flexDirection:'column', gap:6 }}>
+            {/* Password — was f4, now f5 */}
+            <div className="f5" style={{ display:'flex', flexDirection:'column', gap:6 }}>
               <label style={{ fontSize:12, fontWeight:600, color:'#3d3350' }}>Create Password</label>
               <div style={{ position:'relative' }}>
                 <input className="inp" type={showPassword ? 'text' : 'password'} required
@@ -295,8 +322,8 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Register Button */}
-            <div className="f5">
+            {/* Register Button — was f5, now f6 */}
+            <div className="f6">
               <button type="submit" disabled={loading} className="btn-primary">
                 {loading
                   ? <span style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:9 }}>
@@ -307,15 +334,15 @@ const Register = () => {
               </button>
             </div>
 
-            {/* Divider */}
-            <div className="f5" style={{ display:'flex', alignItems:'center', gap:12 }}>
+            {/* Divider — was f5, now f7 */}
+            <div className="f7" style={{ display:'flex', alignItems:'center', gap:12 }}>
               <span style={{ flex:1,height:1,background:'linear-gradient(90deg,transparent,#e8e3f5)' }} />
               <span style={{ fontSize:10,fontWeight:700,color:'#c8c2d8',textTransform:'uppercase',letterSpacing:2 }}>or</span>
               <span style={{ flex:1,height:1,background:'linear-gradient(90deg,#e8e3f5,transparent)' }} />
             </div>
 
-            {/* Google Registration */}
-            <div className="f6">
+            {/* Google Registration — was f6, now f8 */}
+            <div className="f8">
               <button type="button" onClick={handleGoogleRegister} className="btn-google">
                 <svg width="17" height="17" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -329,7 +356,7 @@ const Register = () => {
 
           </form>
 
-          {/* Footer */}
+          {/* Footer — stays f7 for the link text */}
           <p className="f7" style={{ marginTop:18, textAlign:'center', fontSize:12, color:'#b0a8c8' }}>
             Already have an account?{' '}
             <Link to="/login" style={{ color:'#b91c1c', fontWeight:700, textDecoration:'none' }}
@@ -354,3 +381,5 @@ const Register = () => {
 };
 
 export default Register;
+
+
