@@ -56,13 +56,17 @@ const ProductListPage = () => {
 
   useEffect(() => { fetchProductList(); }, [currentUserRole]);
 
+  // ONLY THESE THREE FUNCTIONS CHANGE inside ProductListPage.jsx
+// Replace your existing handleAddSubmit, handleEditSubmit, handleDeleteSubmit with these:
+
   const handleAddSubmit = async () => {
     if (!formData.prodcode || !formData.description || !formData.unit) {
       showToast('All fields are required.', 'error');
       return;
     }
     try {
-      await addProduct({ ...formData, record_status: 'ACTIVE' });
+      // FIX: pass currentUser?.id so makeStamp records who added it
+      await addProduct({ ...formData, record_status: 'ACTIVE' }, currentUser?.id);
       setIsAddOpen(false);
       setFormData({ prodcode: '', description: '', unit: '', current_price: '' });
       fetchProductList();
@@ -79,11 +83,12 @@ const ProductListPage = () => {
       return;
     }
     try {
+      // FIX: pass currentUser?.id so makeStamp records who edited it
       await updateProduct(selectedProduct.prodcode, {
         description:   formData.description,
         unit:          formData.unit,
         current_price: formData.current_price,
-      });
+      }, currentUser?.id);
       setIsEditOpen(false);
       fetchProductList();
       showToast('Product updated successfully.');
@@ -95,7 +100,8 @@ const ProductListPage = () => {
 
   const handleDeleteSubmit = async () => {
     try {
-      await softDeleteProduct(selectedProduct.prodcode);
+      // FIX: pass currentUser?.id so makeStamp records who deleted it
+      await softDeleteProduct(selectedProduct.prodcode, currentUser?.id);
       setIsDeleteOpen(false);
       fetchProductList();
       showToast('Product deactivated.');
