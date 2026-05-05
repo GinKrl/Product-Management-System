@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
+
 import Login              from './pages/Login';
 import Register           from './pages/Register';
 import AppShell           from './components/AppShell';
@@ -12,6 +13,7 @@ import ProductReportPage  from './pages/ProductReportPage';
 import TopSellingPage     from './pages/TopSellingPage';
 import UserManagementPage from './pages/UserManagementPage';
 
+
 function App() {
   return (
     <BrowserRouter>
@@ -21,12 +23,14 @@ function App() {
         <Route path="/register"      element={<Register />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
 
+
         {/* 📦 Product Module */}
         <Route path="/products" element={
           <ProtectedRoute>
             <AppShell><ProductListPage /></AppShell>
           </ProtectedRoute>
         } />
+
 
         {/* 🗑️ Deleted Items Panel */}
         <Route path="/deleted-items" element={
@@ -35,6 +39,7 @@ function App() {
           </ProtectedRoute>
         } />
 
+
         {/* 📊 Reports Module */}
         <Route path="/reports/products" element={
           <ProtectedRoute requiredRight="REP_001">
@@ -42,11 +47,13 @@ function App() {
           </ProtectedRoute>
         } />
 
+
         <Route path="/reports/top-selling" element={
           <ProtectedRoute requiredRight="REP_002">
             <AppShell><TopSellingPage /></AppShell>
           </ProtectedRoute>
         } />
+
 
         {/* 👥 Admin Module */}
         <Route path="/admin/users" element={
@@ -54,6 +61,7 @@ function App() {
             <AppShell><UserManagementPage /></AppShell>
           </ProtectedRoute>
         } />
+
 
         {/* Fallbacks */}
         <Route path="/dashboard" element={<Navigate to="/products" replace />} />
@@ -63,4 +71,8 @@ function App() {
   );
 }
 
+
 export default App;
+
+
+
