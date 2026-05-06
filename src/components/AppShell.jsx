@@ -103,7 +103,6 @@ const NAV_ITEMS = [
   },
   {
     section: 'Settings',
-    roles: ['ADMIN', 'SUPERADMIN'],
     items: [
       {
         label: 'User Management',
@@ -390,7 +389,3 @@ const AppShell = ({ children }) => {
 
 
 export default AppShell;
-
-
-
-
