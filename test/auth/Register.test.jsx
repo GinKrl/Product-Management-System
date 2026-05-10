@@ -26,17 +26,25 @@ describe('Register Component', () => {
   it('renders registration form', () => {
     customRender(<Register />);
     expect(screen.getByText('Create your account')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('John Doe')).toBeInTheDocument();
+    // Register page uses split name fields: First Name + Last Name + Username
+    expect(screen.getByPlaceholderText('John')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Doe')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('johndoe')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('At least 6 characters')).toBeInTheDocument();
+
   });
 
   it('submits email/password registration successfully', async () => {
     customRender(<Register />);
 
-    await userEvent.type(screen.getByPlaceholderText('John Doe'), 'John Doe');
+    // Register page uses split fields: John + Doe + johndoe
+    await userEvent.type(screen.getByPlaceholderText('John'), 'John');
+    await userEvent.type(screen.getByPlaceholderText('Doe'), 'Doe');
+    await userEvent.type(screen.getByPlaceholderText('johndoe'), 'johndoe');
     await userEvent.type(screen.getByPlaceholderText('you@example.com'), 'newuser@example.com');
     await userEvent.type(screen.getByPlaceholderText('At least 6 characters'), 'password123');
+
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Account' }));
 
@@ -45,9 +53,13 @@ describe('Register Component', () => {
         email: 'newuser@example.com',
         password: 'password123',
         options: {
-          data: { full_name: 'John Doe' }
-        }
+        data: expect.objectContaining({
+            full_name: 'John Doe',
+          }),
+        },
       });
+
+
     });
 
     // Note: Manual verification - confirmation email sent (check Supabase dashboard)
@@ -61,8 +73,12 @@ describe('Register Component', () => {
 
     customRender(<Register />);
 
-    await userEvent.type(screen.getByPlaceholderText('John Doe'), 'John Doe');
+    // Register page uses split fields: John + Doe + johndoe
+    await userEvent.type(screen.getByPlaceholderText('John'), 'John');
+    await userEvent.type(screen.getByPlaceholderText('Doe'), 'Doe');
+    await userEvent.type(screen.getByPlaceholderText('johndoe'), 'johndoe');
     await userEvent.type(screen.getByPlaceholderText('you@example.com'), 'duplicate@example.com');
+
     await userEvent.type(screen.getByPlaceholderText('At least 6 characters'), 'password123');
 
     fireEvent.click(screen.getByRole('button', { name: 'Create Account' }));
