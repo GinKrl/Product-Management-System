@@ -1,4 +1,3 @@
-// src/contexts/AuthContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 
@@ -11,6 +10,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const handleSessionGuard = async (currentSession) => {
+      // If there's no session at all, clear states and stop loading
       if (!currentSession) {
         setSession(null);
         setCurrentUser(null);
@@ -19,7 +19,8 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        // FIX: column is 'id' not 'userid' in the user table
+        // Fetch the supplemental user data from our 'user' table
+        // We use .maybeSingle() to handle cases where Auth exists but DB row doesn't
         const { data, error } = await supabase
           .from('user')
           .select('user_type, record_status')
@@ -28,24 +29,16 @@ export function AuthProvider({ children }) {
 
         if (error) throw error;
 
-        // Block INACTIVE accounts
-        if (data?.record_status === 'INACTIVE') {
+        // Security Check: Block INACTIVE accounts or missing DB records
+        if (!data || data.record_status === 'INACTIVE') {
+          console.warn("Access Denied: Account is inactive or not provisioned.");
           await supabase.auth.signOut();
-          setCurrentUser(null);
           setSession(null);
-          setLoading(false);
+          setCurrentUser(null);
           return;
         }
 
-        // Block users with no DB row (not yet provisioned)
-        if (!data) {
-          await supabase.auth.signOut();
-          setCurrentUser(null);
-          setSession(null);
-          setLoading(false);
-          return;
-        }
-
+        // Successfully verified: Set the session and the enhanced user object
         setSession(currentSession);
         setCurrentUser({
           ...currentSession.user,
@@ -53,21 +46,23 @@ export function AuthProvider({ children }) {
         });
 
       } catch (err) {
-        // On error, sign out to be safe
+        console.error("Auth Guard Error:", err.message);
+        // On critical error, sign out to prevent stale sessions
         await supabase.auth.signOut();
-        setCurrentUser(null);
         setSession(null);
+        setCurrentUser(null);
       } finally {
+        // Stop the loading spinner (ProtectedRoute will now allow children to render)
         setLoading(false);
       }
     };
 
-    // Initial session check
+    // 1. Initial Check: Run once when the app/provider mounts
     supabase.auth.getSession().then(({ data: { session } }) => {
       handleSessionGuard(session);
     });
 
-    // Listen for auth state changes
+    // 2. Event Listener: Listen for login, logout, and token refreshes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         handleSessionGuard(session);
@@ -83,11 +78,18 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ currentUser, session, loading }}>
+      {/* Only render the app once the initial loading check is finished.
+         This prevents the "Flash of Unauthenticated Content" 
+      */}
       {!loading && children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
 }
