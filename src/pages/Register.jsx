@@ -39,7 +39,7 @@ const Register = () => {
       setErrorMsg(error.message);
       setLoading(false);
     } else {
-      alert("Registration successful! Check your email for a confirmation link.");
+      alert("Registration successful! Your account has been created and is pending activation by an administrator.");
       setLoading(false);
       navigate('/login');
     }
