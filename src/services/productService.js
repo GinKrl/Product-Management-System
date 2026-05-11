@@ -69,8 +69,8 @@ export const addProduct = async (productData, userId) => {
     const rawPrice   = productData.current_price || productData.price || 0;
     const cleanPrice = parseFloat(rawPrice.toString().replace(/,/g, ''));
 
-    // FIX: use makeStamp for proper audit format
-    const stamp = makeStamp('ADDED', userId);
+    // Truncate stamp to 60 chars to prevent DB error
+    const safeStamp = makeStamp('ADDED', userId).substring(0, 60);
 
     const { data: newProduct, error: productError } = await supabase
       .from('product')
@@ -79,7 +79,7 @@ export const addProduct = async (productData, userId) => {
         description:   productData.description,
         unit:          productData.unit,
         record_status: 'ACTIVE',
-        stamp,
+        stamp:         safeStamp,
       }])
       .select();
 
@@ -87,8 +87,6 @@ export const addProduct = async (productData, userId) => {
 
     const currentDate = new Date().toISOString().split('T')[0];
 
-    // FIX: columns are lowercase — matches actual DB
-    // pricehist DOES have record_status and stamp columns — confirmed from DB screenshot
     const { error: priceError } = await supabase
       .from('pricehist')
       .insert([{
@@ -96,7 +94,7 @@ export const addProduct = async (productData, userId) => {
         unitprice:     cleanPrice,
         effdate:       currentDate,
         record_status: 'ACTIVE',
-        stamp,
+        stamp:         safeStamp,
       }]);
 
     if (priceError) throw priceError;
@@ -112,20 +110,18 @@ export const addProduct = async (productData, userId) => {
  */
 export const updateProduct = async (prodcode, productData, userId) => {
   try {
-    const rawPrice   = productData.current_price !== undefined
-      ? productData.current_price
-      : productData.price;
+    const rawPrice   = productData.current_price !== undefined ? productData.current_price : productData.price;
     const cleanPrice = parseFloat(rawPrice.toString().replace(/,/g, ''));
 
-    // FIX: use makeStamp for proper audit format
-    const stamp = makeStamp('EDITED', userId);
+    // Truncate stamp to 60 chars
+    const safeStamp = makeStamp('EDITED', userId).substring(0, 60);
 
     const { data: updatedProduct, error: productError } = await supabase
       .from('product')
       .update({
         description: productData.description,
         unit:        productData.unit,
-        stamp,
+        stamp:       safeStamp,
       })
       .eq('prodcode', prodcode)
       .select();
@@ -134,7 +130,6 @@ export const updateProduct = async (prodcode, productData, userId) => {
 
     const currentDate = new Date().toISOString().split('T')[0];
 
-    // FIX: lowercase column names + correct onConflict key
     const { error: priceError } = await supabase
       .from('pricehist')
       .upsert([{
@@ -142,7 +137,7 @@ export const updateProduct = async (prodcode, productData, userId) => {
         unitprice:     cleanPrice,
         effdate:       currentDate,
         record_status: 'ACTIVE',
-        stamp,
+        stamp:         safeStamp,
       }], { onConflict: 'prodcode,effdate' });
 
     if (priceError) throw priceError;
@@ -158,12 +153,17 @@ export const updateProduct = async (prodcode, productData, userId) => {
  */
 export const softDeleteProduct = async (prodcode, userId) => {
   try {
+    // Generate the full stamp
+    const fullStamp = makeStamp('DEACTIVATED', userId);
+    
+    // FORCE it to 60 characters so the DB doesn't reject it
+    const safeStamp = fullStamp.substring(0, 60); 
+
     const { data, error } = await supabase
       .from('product')
       .update({
         record_status: 'INACTIVE',
-        // FIX: use makeStamp for proper audit format
-        stamp: makeStamp('DEACTIVATED', userId),
+        stamp: safeStamp, 
       })
       .eq('prodcode', prodcode)
       .select();
@@ -171,6 +171,7 @@ export const softDeleteProduct = async (prodcode, userId) => {
     if (error) throw error;
     return data;
   } catch (error) {
+    // If it still fails, it might be a different column limit!
     console.error(`Error soft deleting product ${prodcode}:`, error.message);
     throw error;
   }
@@ -181,12 +182,14 @@ export const softDeleteProduct = async (prodcode, userId) => {
  */
 export const recoverProduct = async (prodcode, userId) => {
   try {
+    // Truncate stamp to 60 chars
+    const safeStamp = makeStamp('REACTIVATED', userId).substring(0, 60);
+
     const { data, error } = await supabase
       .from('product')
       .update({
         record_status: 'ACTIVE',
-        // FIX: use makeStamp for proper audit format
-        stamp: makeStamp('REACTIVATED', userId),
+        stamp: safeStamp,
       })
       .eq('prodcode', prodcode)
       .select();
