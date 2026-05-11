@@ -22,8 +22,6 @@ const downloadCSV = (rows) => {
 };
 
 const fetchProductReport = async () => {
-  // FIX: fetch ALL products (ADMIN/SUPERADMIN need to see INACTIVE too in the report)
-  // UI will gate the Inactive filter chip by role
   const { data: products, error: pErr } = await supabase
     .from('product')
     .select('*')
@@ -48,34 +46,39 @@ const fetchProductReport = async () => {
 };
 
 const ProductReportPage = () => {
-  const [rows, setRows]         = useState([]);
+  const [rows, setRows]       = useState([]);
   const [isLoading, setLoading] = useState(true);
-  const [error, setError]       = useState(null);
-  const [search, setSearch]     = useState('');
-  const [filter, setFilter]     = useState('ACTIVE'); // FIX: default to ACTIVE per guide
-  const [sortCol, setSortCol]   = useState('prodcode');
-  const [sortDir, setSortDir]   = useState('asc');
+  const [error, setError]     = useState(null);
+  const [search, setSearch]   = useState('');
+  const [filter, setFilter]   = useState('ACTIVE');
+  const [sortCol, setSortCol] = useState('prodcode');
+  const [sortDir, setSortDir] = useState('asc');
 
-  // FIX: get userRole to gate the Inactive filter chip from USERs
   const { userRole } = useRightsContext();
   const isAdmin = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
 
-  useEffect(() => {
+  // PR-03: extracted so the retry button can call it
+  const loadReport = () => {
     setLoading(true);
+    setError(null);
     fetchProductReport()
       .then(setRows)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(() => { loadReport(); }, []);
 
   const handleSort = (col) => {
-    setSortCol(c => { if (c === col) { setSortDir(d => d === 'asc' ? 'desc' : 'asc'); return c; } setSortDir('asc'); return col; });
+    setSortCol(c => {
+      if (c === col) { setSortDir(d => d === 'asc' ? 'desc' : 'asc'); return c; }
+      setSortDir('asc'); return col;
+    });
   };
 
   const visible = useMemo(() => {
     return [...rows]
       .filter(r => {
-        // FIX: non-admin users can never see INACTIVE rows
         if (!isAdmin && r.record_status === 'INACTIVE') return false;
         if (filter !== 'ALL' && r.record_status !== filter) return false;
         if (search) {
@@ -191,16 +194,24 @@ const ProductReportPage = () => {
         .b-inactive{background:var(--amber-bg);color:var(--amber-text);}
         .b-inactive .badge-dot{background:var(--amber-text);}
 
+        /* PR-03: unified states */
         .tbl-state{padding:56px 24px;text-align:center;color:var(--muted);}
         .tbl-state p{margin:8px 0 0;font-size:13px;}
         .loader{width:26px;height:26px;border:3px solid #f3f4f6;border-top-color:var(--red-mid);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px;}
-        .err-banner{margin:16px 22px;padding:12px 16px;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;font-size:12px;color:#dc2626;font-weight:600;}
+
+        /* PR-03: error banner with retry */
+        .err-banner{margin:0 0 4px;padding:12px 16px;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;font-size:12px;color:#dc2626;font-weight:600;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+        .err-retry{padding:5px 14px;border-radius:7px;border:1px solid #fecaca;background:#fff;color:#dc2626;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;transition:background .15s;}
+        .err-retry:hover{background:#fef2f2;}
 
         @media(max-width:768px){
-          .rp-topbar{padding:14px 20px;flex-wrap:wrap;height:auto;}
-          .rp-body{padding:20px;}
+          .rp-topbar{padding:14px 20px;flex-wrap:wrap;height:auto;gap:12px;}
+          .rp-body{padding:16px;}
           .stat-row{grid-template-columns:1fr 1fr;}
           .toolbar{flex-direction:column;align-items:flex-start;}
+          .toolbar-r{width:100%;}
+          .srch{width:100%;}
+          .srch:focus{width:100%;}
         }
       `}</style>
 
@@ -222,7 +233,14 @@ const ProductReportPage = () => {
         </div>
 
         <div className="rp-body">
-          {error && <div className="err-banner">⚠ Failed to load: {error}</div>}
+
+          {/* PR-03: error banner — only shown after loading completes */}
+          {error && !isLoading && (
+            <div className="err-banner">
+              <span>⚠ Failed to load: {error}</span>
+              <button className="err-retry" onClick={loadReport}>Try again</button>
+            </div>
+          )}
 
           <div className="stat-row">
             <div className="sc sc-dark">
@@ -286,17 +304,19 @@ const ProductReportPage = () => {
                   <input className="srch" placeholder="Search code or name…" value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
                 <div className="f-chips">
-                  {/* FIX: 'All' filter only shown to ADMIN/SUPERADMIN since it includes INACTIVE */}
                   {isAdmin && <button className={`f-chip ${filter==='ALL'?'fc-all':''}`} onClick={() => setFilter('ALL')}>All</button>}
                   <button className={`f-chip ${filter==='ACTIVE'?'fc-active':''}`} onClick={() => setFilter('ACTIVE')}>Active</button>
-                  {/* FIX: Inactive filter only shown to ADMIN/SUPERADMIN */}
                   {isAdmin && <button className={`f-chip ${filter==='INACTIVE'?'fc-inact':''}`} onClick={() => setFilter('INACTIVE')}>Inactive</button>}
                 </div>
               </div>
             </div>
 
+            {/* PR-03: loading → empty → data */}
             {isLoading ? (
-              <div className="tbl-state"><div className="loader" /><p>Loading report…</p></div>
+              <div className="tbl-state">
+                <div className="loader" />
+                <p>Loading report…</p>
+              </div>
             ) : (
               <table className="rp-table">
                 <thead>
@@ -306,18 +326,20 @@ const ProductReportPage = () => {
                     <th className="no-sort">Unit</th>
                     <th onClick={() => handleSort('current_price')}>Current Price <SortIcon col="current_price" /></th>
                     <th onClick={() => handleSort('record_status')}>Status <SortIcon col="record_status" /></th>
-                    {/* FIX: stamp column only shown to ADMIN/SUPERADMIN per guide Section 2.3 */}
                     {isAdmin && <th onClick={() => handleSort('stamp')}>Last Updated <SortIcon col="stamp" /></th>}
                   </tr>
                 </thead>
                 <tbody>
                   {visible.length === 0 ? (
-                    <tr><td colSpan={isAdmin ? 6 : 5}>
-                      <div className="tbl-state">
-                        <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
-                        <p>No products match your filter.</p>
-                      </div>
-                    </td></tr>
+                    <tr>
+                      <td colSpan={isAdmin ? 6 : 5}>
+                        <div className="tbl-state">
+                          <div style={{ fontSize: 28, marginBottom: 8 }}>📋</div>
+                          <p style={{ fontWeight: 600, color: 'var(--ink-3)', marginBottom: 4 }}>No products found</p>
+                          <p>Try adjusting your search or filter.</p>
+                        </div>
+                      </td>
+                    </tr>
                   ) : visible.map(r => (
                     <tr key={r.prodcode}>
                       <td><span className="cell-code">{r.prodcode}</span></td>
@@ -333,7 +355,6 @@ const ProductReportPage = () => {
                           <span className="badge-dot" />{r.record_status}
                         </span>
                       </td>
-                      {/* FIX: stamp displayed as plain text — it's VARCHAR(60) audit string, not a date */}
                       {isAdmin && (
                         <td style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: 'var(--muted)' }}>
                           {r.stamp || '—'}
