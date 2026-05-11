@@ -60,7 +60,14 @@ export function UserRightsProvider({ children }) {
 if (!rightsError && rightsData) {
   const rightsMap = {};
   rightsData.forEach((row) => {
-    const keyMap = { 2: 'PRD_ADD', 3: 'PRD_EDIT', 4: 'PRD_DEL' };
+    const keyMap = { 
+  2: 'PRD_ADD', 
+  3: 'PRD_EDIT', 
+  4: 'PRD_DEL',
+  5: 'REP_001', // This is what shows the Product Report
+  6: 'REP_002', 
+  7: 'ADM_USER'
+};
     const permissionName = keyMap[row.right_id];
     if (permissionName) {
       // Use the singular 'right_value' here too
