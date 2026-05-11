@@ -23,29 +23,6 @@ const NAV_ITEMS = [
         ),
       },
       {
-        label: 'Orders',
-        href: '#',
-        badge: '4',
-        icon: (
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
-            <path d="M9 17H7a2 2 0 01-2-2V5a2 2 0 012-2h10a2 2 0 012 2v3" />
-            <path d="M13 13h8m0 0l-3-3m3 3l-3 3" />
-          </svg>
-        ),
-      },
-      {
-        label: 'Customers',
-        href: '#',
-        icon: (
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
-            <circle cx="9" cy="7" r="4" />
-            <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" />
-            <path d="M16 3.13a4 4 0 010 7.75" />
-            <path d="M21 21v-2a4 4 0 00-3-3.87" />
-          </svg>
-        ),
-      },
-      {
         label: 'Deleted Items',
         href: '/deleted-items',
         roles: ['ADMIN', 'SUPERADMIN'],
@@ -88,17 +65,6 @@ const NAV_ITEMS = [
           </svg>
         ),
       },
-      {
-        label: 'Insights',
-        href: '#',
-        roles: ['ADMIN', 'MANAGER'],
-        icon: (
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 8v4l3 3" />
-          </svg>
-        ),
-      },
     ],
   },
   {
@@ -111,33 +77,12 @@ const NAV_ITEMS = [
         // Must use requiredRight:'ADM_USER' per sprint deliverable and rights matrix.
         // ADM_USER=1 only for SUPERADMIN, so ADMIN will not see this link.
         requiredRight: 'ADM_USER',
+        roles: ['SUPERADMIN'],
         icon: (
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
             <circle cx="9" cy="7" r="4" />
             <path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2" />
             <path d="M19 11l2 2 4-4" />
-          </svg>
-        ),
-      },
-      {
-        label: 'Team',
-        href: '#',
-        roles: ['ADMIN', 'SUPERADMIN'],
-        icon: (
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-          </svg>
-        ),
-      },
-      {
-        label: 'Preferences',
-        href: '#',
-        roles: ['ADMIN', 'SUPERADMIN'],
-        icon: (
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.9">
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12h2M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41" />
           </svg>
         ),
       },
@@ -160,9 +105,6 @@ const getPageLabel = (pathname) => {
     '/reports/products':    'Product Report',
     '/reports/top-selling': 'Top Selling',
     '/admin/users':         'User Management',
-    '/orders':              'Orders',
-    '/customers':           'Customers',
-    '/insights':            'Insights',
   };
   return map[pathname] ?? 'Dashboard';
 };
@@ -220,11 +162,21 @@ const AppShell = ({ children }) => {
 
 
   const canSeeItem = (item) => {
-    if (item.requiredRight) {
-      return rights[item.requiredRight] === 1;
-    }
-    return canSeeByRole(item.roles, currentRole);
-  };
+  // 1. If it's a restricted role-based item (like Deleted Items)
+  if (item.roles) {
+    const hasRole = item.roles.includes(currentRole);
+    if (!hasRole) return false;
+  }
+
+  // 2. If it's a right-based item (like Top Selling or User Management)
+  if (item.requiredRight) {
+    const hasRight = rights[item.requiredRight] === 1;
+    if (!hasRight) return false;
+  }
+
+  // 3. If it has NO restrictions, or passed all checks above, show it
+  return true;
+};
 
 
   return (
